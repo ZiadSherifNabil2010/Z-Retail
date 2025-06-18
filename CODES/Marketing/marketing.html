@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Title Section -->
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="card-title">Z-Retail Menu QR Generator</h2>
+                    <p class="card-text text-muted">Access our menu QR code generator and management system</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- iFrame Section -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="iframe-container">
+                        <iframe 
+                            src="https://diwan-cafe-meuns.firebaseapp.com/"
+                            title="Z-Retail Menu QR Generator"
+                            width="100%"
+                            height="800px"
+                            frameborder="0"
+                            allowfullscreen
+                            loading="lazy">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Responsive iframe container */
+.iframe-container {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    min-height: 800px;
+}
+
+/* Responsive iframe */
+.iframe-container iframe {
+    border: none;
+    border-radius: 0.375rem;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Loading state */
+.iframe-container::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.2rem;
+    color: #6c757d;
+}
+
+/* Hide loading text when iframe is loaded */
+.iframe-container iframe:not([loading]) + .iframe-container::before {
+    display: none;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const iframe = document.querySelector('iframe');
+    
+    // Handle iframe loading
+    iframe.addEventListener('load', function() {
+        this.style.opacity = 1;
+    });
+
+    // Handle iframe errors
+    iframe.addEventListener('error', function() {
+        this.parentElement.innerHTML = `
+            <div class="alert alert-danger" role="alert">
+                Error loading the menu system. Please try refreshing the page.
+            </div>
+        `;
+    });
+});
+</script>
+{% endblock %}

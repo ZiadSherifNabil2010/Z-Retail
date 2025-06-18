@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Categories Panel -->
+        <div class="col-md-8" id="categoriesPanel">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Categories</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="categoryGrid">
+                        {% for category in categories %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card category-card" onclick="showCategoryProducts('{{ category.name|replace("'", "\\'")|replace('"', '\\"') }}')">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">{{ category.name }}</h5>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Panel (initially hidden) -->
+        <div class="col-md-8" id="productsPanel" style="display: none;">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 id="currentCategory">Products</h4>
+                    <button class="btn btn-secondary" onclick="showCategories()">Back to Categories</button>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="productGrid">
+                        <!-- Products will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Panel -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Current Order</h4>
+                </div>
+                <div class="card-body">
+                    <div id="orderItems">
+                        <!-- Order items will be listed here -->
+                    </div>
+                    <div class="order-total">
+                        <h5>Total: $<span id="orderTotal">0.00</span></h5>
+                    </div>
+                    <button class="btn btn-primary btn-block" id="checkoutBtn">Checkout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add this modal for checkout -->
+<div class="modal fade" id="checkoutModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Checkout</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <h6>Order Summary</h6>
+                    <div id="checkoutItems"></div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <strong>Total:</strong>
+                        <span id="checkoutTotal">$0.00</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Payment Method</label>
+                    <div class="payment-methods">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="paymentMethod" id="cashPayment" value="Cash" checked>
+                            <label class="form-check-label" for="cashPayment">
+                                Cash
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="paymentMethod" id="creditCardPayment" value="Credit Card">
+                            <label class="form-check-label" for="creditCardPayment">
+                                Credit Card
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="paymentMethod" id="applePayPayment" value="Apple Pay">
+                            <label class="form-check-label" for="applePayPayment">
+                                Apple Pay
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="processCheckout()">Complete Payment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables - moved outside DOMContentLoaded
+let currentOrder = [];
+let currentCategory = '';
+
+// Define processCheckout globally
+window.processCheckout = function() {
+    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+    const total = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    // Create order summary for alert
+    let orderSummary = 'Order Summary:\n\n';
+    currentOrder.forEach(item => {
+        orderSummary += `${item.name} x ${item.quantity} = $${(item.price * item.quantity).toFixed(2)}\n`;
+    });
+    orderSummary += `\nTotal: $${total.toFixed(2)}\n`;
+    orderSummary += `Payment Method: ${paymentMethod}`;
+    
+    // Show alert with order details
+    alert(orderSummary);
+    
+    // Clear current order
+    currentOrder = [];
+    updateOrderDisplay();
+    
+    // Close modal
+    const checkoutModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
+    checkoutModal.hide();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    window.showCategoryProducts = function(category) {
+        console.log('Showing products for category:', category); // Debug log
+        if (!category || category.trim() === '') {
+            console.error('No category specified');
+            return;
+        }
+        
+        currentCategory = category;
+        document.getElementById('categoriesPanel').style.display = 'none';
+        document.getElementById('productsPanel').style.display = 'block';
+        document.getElementById('currentCategory').textContent = category;
+        
+        // Make the API call to get products
+        const encodedCategory = encodeURIComponent(category.trim());
+        console.log('Encoded category:', encodedCategory); // Debug log
+        
+        fetch(`/get_pos_items?category=${encodedCategory}`)
+            .then(response => response.json())
+            .then(products => {
+                console.log('Received products:', products); // Debug log
+                
+                const productGrid = document.getElementById('productGrid');
+                productGrid.innerHTML = '';
+                
+                if (products.length === 0) {
+                    productGrid.innerHTML = '<div class="col-12 text-center"><p>No products available in this category</p></div>';
+                    return;
+                }
+                
+                products.forEach(product => {
+                    console.log('Processing product:', product); // Debug log
+                    const productCard = createProductCard(product);
+                    productGrid.appendChild(productCard);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading products:', error);
+                const productGrid = document.getElementById('productGrid');
+                productGrid.innerHTML = '<div class="col-12 text-center"><p class="text-danger">Error loading products. Please try again.</p></div>';
+            });
+    }
+    
+    window.showCategories = function() {
+        document.getElementById('productsPanel').style.display = 'none';
+        document.getElementById('categoriesPanel').style.display = 'block';
+        currentCategory = '';
+    }
+    
+    function createProductCard(product) {
+        console.log('Creating card for product:', product); // Debug log
+        
+        const div = document.createElement('div');
+        div.className = 'col-md-4 mb-3';
+        div.innerHTML = `
+            <div class="card product-card" onclick="addToOrder('${product.isbn}', '${product.name}', ${product.price || 0})">
+                <div class="card-body">
+                    <h5 class="card-title">${product.name}</h5>
+                    <p class="card-text">
+                        <strong>Price:</strong> $${(product.price || 0).toFixed(2)}<br>
+                        <strong>VAT:</strong> $${(product.vat || 0).toFixed(2)}<br>
+                        <strong>Unit:</strong> ${product.unit || ''}<br>
+                        <small class="text-muted">SKU: ${product.sku}</small>
+                    </p>
+                </div>
+            </div>
+        `;
+        return div;
+    }
+    
+    window.addToOrder = function(isbn, name, price) {
+        const existingItem = currentOrder.find(item => item.isbn === isbn);
+        if (existingItem) {
+            existingItem.quantity = (existingItem.quantity || 1) + 1;
+        } else {
+            currentOrder.push({ isbn, name, price, quantity: 1 });
+        }
+        updateOrderDisplay();
+    }
+    
+    window.updateOrderDisplay = function() {
+        const orderItems = document.getElementById('orderItems');
+        const orderTotal = document.getElementById('orderTotal');
+        
+        orderItems.innerHTML = '';
+        let total = 0;
+        
+        currentOrder.forEach((item, index) => {
+            const itemTotal = item.price * (item.quantity || 1);
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'order-item';
+            itemDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span>${item.name}</span>
+                        <div class="quantity-controls">
+                            <button class="btn btn-sm btn-secondary" onclick="updateQuantity(${index}, -1)">-</button>
+                            <span class="mx-2">${item.quantity || 1}</span>
+                            <button class="btn btn-sm btn-secondary" onclick="updateQuantity(${index}, 1)">+</button>
+                        </div>
+                    </div>
+                    <div>
+                        <span>$${itemTotal.toFixed(2)}</span>
+                        <button class="btn btn-sm btn-danger ml-2" onclick="removeItem(${index})">×</button>
+                    </div>
+                </div>
+            `;
+            orderItems.appendChild(itemDiv);
+            total += itemTotal;
+        });
+        
+        orderTotal.textContent = total.toFixed(2);
+    }
+    
+    window.updateQuantity = function(index, change) {
+        const item = currentOrder[index];
+        const newQuantity = (item.quantity || 1) + change;
+        if (newQuantity > 0) {
+            item.quantity = newQuantity;
+            updateOrderDisplay();
+        } else if (newQuantity === 0) {
+            removeItem(index);
+        }
+    }
+    
+    window.removeItem = function(index) {
+        currentOrder.splice(index, 1);
+        updateOrderDisplay();
+    }
+    
+    function showCheckoutModal() {
+        const checkoutItems = document.getElementById('checkoutItems');
+        const checkoutTotal = document.getElementById('checkoutTotal');
+        
+        // Clear previous items
+        checkoutItems.innerHTML = '';
+        
+        // Add items to checkout summary
+        currentOrder.forEach(item => {
+            const itemElement = document.createElement('div');
+            itemElement.className = 'd-flex justify-content-between mb-2';
+            itemElement.innerHTML = `
+                <span>${item.name} x ${item.quantity}</span>
+                <span>$${(item.price * item.quantity).toFixed(2)}</span>
+            `;
+            checkoutItems.appendChild(itemElement);
+        });
+        
+        // Update total
+        const total = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        checkoutTotal.textContent = `$${total.toFixed(2)}`;
+        
+        // Show modal
+        const checkoutModal = new bootstrap.Modal(document.getElementById('checkoutModal'));
+        checkoutModal.show();
+    }
+    
+    // Update the existing checkout button click handler
+    document.getElementById('checkoutBtn').onclick = showCheckoutModal;
+});
+</script>
+
+<style>
+.category-card {
+    cursor: pointer;
+    transition: transform 0.2s;
+    background-color: #f8f9fa;
+    height: 100%;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.category-card:hover {
+    transform: scale(1.05);
+    background-color: #e9ecef;
+}
+
+.product-card {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.product-card:hover {
+    transform: scale(1.05);
+}
+
+.order-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.quantity-controls {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 5px;
+}
+
+.card-img-top {
+    height: 150px;
+    object-fit: cover;
+}
+
+.payment-methods {
+    padding: 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+}
+
+.form-check {
+    padding: 10px;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+.form-check:hover {
+    background-color: #f8f9fa;
+}
+
+.form-check-input:checked + .form-check-label {
+    font-weight: bold;
+}
+</style>
+{% endblock %}

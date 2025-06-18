@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accountant Interface</title>
+    <!-- Bootstrap CSS (changed from RTL to regular) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .navbar {
+            background-color: #343a40;
+        }
+        .card {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .table-responsive {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .status-badge {
+            font-size: 0.85rem;
+            padding: 0.35em 0.65em;
+            border-radius: 0.25rem;
+        }
+        .pending {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .approved {
+            background-color: #198754;
+            color: white;
+        }
+        .rejected {
+            background-color: #dc3545;
+            color: white;
+        }
+        .difference-negative {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .difference-positive {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .difference-zero {
+            color: #198754;
+            font-weight: bold;
+        }
+        .modal-header, .modal-footer {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Restaurant Inventory System - Accountant Interface</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('redirect_by_role') }}">Home</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- User Info Card -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">User Information</h5>
+                <p class="card-text">Username: {{ session['user']['name'] }}</p>
+                <p class="card-text">Role: Accountant</p>
+            </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <!-- Add Search Bar -->
+                    <div class="col-md-12 mb-3">
+                        <label for="searchInput" class="form-label">Search</label>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search by report ID, branch, or username...">
+                    </div>
+                    <!-- Existing Filters -->
+                    <div class="col-md-3 mb-2">
+                        <label for="branch-filter" class="form-label">Filter by Branch</label>
+                        <select class="form-select" id="branch-filter">
+                            <option value="">All Branches</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="status-filter" class="form-label">Filter by Status</label>
+                        <select class="form-select" id="status-filter">
+                            <option value="">All Statuses</option>
+                            <option value="Pending Review">Pending Review</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="date-filter-from" class="form-label">From Date</label>
+                        <input type="date" class="form-control" id="date-filter-from">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="date-filter-to" class="form-label">To Date</label>
+                        <input type="date" class="form-control" id="date-filter-to">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stocktaking Reports Table -->
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Stocktaking Reports</h5>
+                <button id="export-csv" class="btn btn-sm btn-light">Export CSV</button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Report ID</th>
+                                <th>Branch</th>
+                                <th>Date</th>
+                                <th>Username</th>
+                                <th>Item Count</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reports-table-body">
+                            {% if reports %}
+                                {% set grouped_reports = {} %}
+                                {% for report in reports %}
+                                    {% if report.stocktaking_id not in grouped_reports %}
+                                        {% set _ = grouped_reports.update({report.stocktaking_id: {'items': [], 'count': 0}}) %}
+                                    {% endif %}
+                                    {% set _ = grouped_reports[report.stocktaking_id]['items'].append(report) %}
+                                    {% set _ = grouped_reports[report.stocktaking_id].update({'count': grouped_reports[report.stocktaking_id]['count'] + 1}) %}
+                                {% endfor %}
+                                
+                                {% for report_id, report_data in grouped_reports.items() %}
+                                    {% set first_item = report_data['items'][0] %}
+                                    <tr>
+                                        <td>{{ first_item.stocktaking_id }}</td>
+                                        <td>{{ first_item.branch }}</td>
+                                        <td>{{ first_item.date }}</td>
+                                        <td>{{ first_item.user_name }}</td>
+                                        <td>{{ report_data['count'] }}</td>
+                                        <td>
+                                            <span class="status-badge 
+                                                {% if first_item.status == 'Pending Review' %}pending{% endif %}
+                                                {% if first_item.status == 'Approved' %}approved{% endif %}
+                                                {% if first_item.status == 'Rejected' %}rejected{% endif %}">
+                                                {{ first_item.status }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-primary view-details-btn" 
+                                                data-report-id="{{ first_item.stocktaking_id }}">
+                                                View Details
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center">No stocktaking reports available</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Details Modal -->
+    <div class="modal fade" id="reportDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Stocktaking Report Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="report-info mb-3">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <strong>Report ID:</strong> <span id="modal-report-id"></span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Branch:</strong> <span id="modal-branch"></span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Date:</strong> <span id="modal-date"></span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Username:</strong> <span id="modal-user"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Item Name</th>
+                                    <th>System Quantity</th>
+                                    <th>Actual Quantity</th>
+                                    <th>Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modal-report-items">
+                                <!-- Items will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <form id="report-status-form" action="{{ url_for('update_stocktaking_status') }}" method="POST">
+                        <input type="hidden" id="form-stocktaking-id" name="stocktaking_id">
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Report Status</label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="Pending Review">Pending Review</option>
+                                <option value="Approved">Approved</option>
+                                <option value="Rejected">Rejected</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="submit-status">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and other scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Populate unique branches for filter
+            const branchFilter = document.getElementById('branch-filter');
+            const branches = new Set();
+            
+            {% for report in reports %}
+                branches.add('{{ report.branch }}');
+            {% endfor %}
+            
+            branches.forEach(branch => {
+                const option = document.createElement('option');
+                option.value = branch;
+                option.textContent = branch;
+                branchFilter.appendChild(option);
+            });
+            
+            // View details button click handler
+            document.querySelectorAll('.view-details-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const reportId = this.dataset.reportId;
+                    showReportDetails(reportId);
+                });
+            });
+            
+            // Submit status form
+            document.getElementById('submit-status').addEventListener('click', function() {
+                document.getElementById('report-status-form').submit();
+            });
+            
+            // Filter functionality
+            const statusFilter = document.getElementById('status-filter');
+            const dateFilterFrom = document.getElementById('date-filter-from');
+            const dateFilterTo = document.getElementById('date-filter-to');
+            
+            [branchFilter, statusFilter, dateFilterFrom, dateFilterTo].forEach(filter => {
+                filter.addEventListener('change', applyFilters);
+            });
+            
+            // Add search functionality
+            document.getElementById('searchInput').addEventListener('input', function() {
+                applyFilters();
+            });
+            
+            function applyFilters() {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                const selectedBranch = branchFilter.value;
+                const selectedStatus = statusFilter.value;
+                const fromDate = dateFilterFrom.value ? new Date(dateFilterFrom.value) : null;
+                const toDate = dateFilterTo.value ? new Date(dateFilterTo.value) : null;
+                
+                const rows = document.querySelectorAll('#reports-table-body tr');
+                
+                rows.forEach(row => {
+                    let showRow = true;
+                    
+                    // Search filter
+                    const searchableText = [
+                        row.cells[0].textContent, // Report ID
+                        row.cells[1].textContent, // Branch
+                        row.cells[3].textContent  // Username
+                    ].join(' ').toLowerCase();
+                    
+                    if (searchTerm && !searchableText.includes(searchTerm)) {
+                        showRow = false;
+                    }
+                    
+                    // Existing filters
+                    if (selectedBranch && row.cells[1].textContent !== selectedBranch) {
+                        showRow = false;
+                    }
+                    
+                    if (selectedStatus && !row.cells[5].textContent.trim().includes(selectedStatus)) {
+                        showRow = false;
+                    }
+                    
+                    const rowDate = new Date(row.cells[2].textContent);
+                    if (fromDate && rowDate < fromDate) {
+                        showRow = false;
+                    }
+                    if (toDate && rowDate > toDate) {
+                        showRow = false;
+                    }
+                    
+                    row.style.display = showRow ? '' : 'none';
+                });
+            }
+            
+            // Function to show report details
+            function showReportDetails(reportId) {
+                // Populate modal with report details
+                document.getElementById('modal-report-id').textContent = reportId;
+                document.getElementById('form-stocktaking-id').value = reportId;
+                
+                // Find all items for this report ID
+                const reportItems = [];
+                {% for report in reports %}
+                    if ('{{ report.stocktaking_id }}' === reportId) {
+                        reportItems.push({
+                            sku: '{{ report.sku }}',
+                            itemName: '{{ report.item_name }}',
+                            expectedQty: '{{ report.expected_quantity }}',
+                            actualQty: '{{ report.actual_quantity }}',
+                            difference: '{{ report.difference }}',
+                            unit: '{{ report.unit }}',
+                            status: '{{ report.status }}',
+                            branch: '{{ report.branch }}',
+                            date: '{{ report.date }}',
+                            userName: '{{ report.user_name }}',
+                            notes: '{{ report.notes }}'
+                        });
+                    }
+                {% endfor %}
+                
+                if (reportItems.length > 0) {
+                    // Set basic report info
+                    document.getElementById('modal-branch').textContent = reportItems[0].branch;
+                    document.getElementById('modal-date').textContent = reportItems[0].date;
+                    document.getElementById('modal-user').textContent = reportItems[0].userName;
+                    
+                    // Set status dropdown value
+                    document.getElementById('status').value = reportItems[0].status;
+                    
+                    // Set notes if available
+                    document.getElementById('notes').value = reportItems[0].notes;
+                    
+                    // Populate items table
+                    const itemsTableBody = document.getElementById('modal-report-items');
+                    itemsTableBody.innerHTML = '';
+                    
+                    reportItems.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${item.sku}</td>
+                            <td>${item.itemName}</td>
+                            <td>Unknown</td>
+                            <td>${item.actualQty}</td>
+                            <td>${item.unit}</td>
+                        `;
+                        itemsTableBody.appendChild(tr);
+                    });
+                }
+                
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('reportDetailsModal'));
+                modal.show();
+            }
+            
+            // Export to CSV
+            document.getElementById('export-csv').addEventListener('click', function() {
+                // Get visible rows
+                const visibleRows = Array.from(document.querySelectorAll('#reports-table-body tr'))
+                    .filter(row => row.style.display !== 'none');
+                
+                if (visibleRows.length === 0) {
+                    alert('No data to export');
+                    return;
+                }
+                
+                let csvContent = 'Report ID,Branch,Date,Username,Item Count,Status\n';
+                
+                visibleRows.forEach(row => {
+                    const cells = Array.from(row.cells).slice(0, 6);
+                    const rowData = cells.map(cell => `"${cell.textContent.trim()}"`).join(',');
+                    csvContent += rowData + '\n';
+                });
+                
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', `Stocktaking_Reports_${new Date().toISOString().slice(0,10)}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        });
+    </script>
+</body>
+</html>

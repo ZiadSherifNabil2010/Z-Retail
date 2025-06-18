@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Company Subscription Management</h2>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Current Subscription Status</h5>
+            <p>Company: {{ company.name }}</p>
+            <p>Subscription End: {{ company.subscription_end }}</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Renew Subscription</h5>
+            <form method="POST">
+                <div class="form-group">
+                    <label for="subscription_type">Select Subscription Period</label>
+                    <select class="form-control" id="subscription_type" name="subscription_type" required>
+                        <option value="3_months">3 Months</option>
+                        <option value="1_year">1 Year</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Renew Subscription</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

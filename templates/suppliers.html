@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Suppliers Management</h2>
+        <div>
+            <a href="{{ url_for('export_suppliers') }}" class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Export to Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search suppliers...">
+                </div>
+                <div class="col-md-3">
+                    <select id="supplierTypeFilter" class="form-control">
+                        <option value="">All Supplier Types</option>
+                        <option value="Raw Materials">Raw Materials</option>
+                        <option value="Packaging">Packaging</option>
+                        <option value="Equipment">Equipment</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="statusFilter" class="form-control">
+                        <option value="">All Status</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button id="resetFilters" class="btn btn-secondary w-100">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Supplier Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('suppliers_management') }}">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <input type="text" name="name" class="form-control" placeholder="Supplier Name *" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <input type="text" name="contact_person" class="form-control" placeholder="Contact Person Name">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <input type="tel" name="phone" class="form-control" placeholder="Phone Number">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <input type="email" name="email" class="form-control" placeholder="Email Address">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <input type="text" name="company_name" class="form-control" placeholder="Company Name">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <select name="supplier_type" class="form-control">
+                            <option value="">Select Supplier Type</option>
+                            <option value="Raw Materials">Raw Materials</option>
+                            <option value="Packaging">Packaging</option>
+                            <option value="Equipment">Equipment</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <input type="text" name="address" class="form-control" placeholder="Address">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <select name="payment_terms" class="form-control">
+                            <option value="">Select Payment Terms</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Net 30">Net 30</option>
+                            <option value="Net 60">Net 60</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <select name="status" class="form-control">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <textarea name="notes" class="form-control" placeholder="Notes" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Add Supplier</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Suppliers List -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Contact Person</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Company</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Created Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for supplier in suppliers %}
+                        <tr>
+                            <td>{{ supplier.name }}</td>
+                            <td>{{ supplier.contact_person }}</td>
+                            <td>{{ supplier.phone }}</td>
+                            <td>{{ supplier.email }}</td>
+                            <td>{{ supplier.company_name }}</td>
+                            <td>{{ supplier.supplier_type }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if supplier.status == 'Active' else 'danger' }}">
+                                    {{ supplier.status }}
+                                </span>
+                            </td>
+                            <td>{{ supplier.created_at }}</td>
+                            <td>
+                                <a href="{{ url_for('edit_supplier', supplier_id=supplier.id) }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('delete_supplier_route', supplier_id=supplier.id) }}" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this supplier?');">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let searchTimeout;
+const searchInput = document.getElementById('searchInput');
+const supplierTypeFilter = document.getElementById('supplierTypeFilter');
+const statusFilter = document.getElementById('statusFilter');
+const resetButton = document.getElementById('resetFilters');
+const suppliersTable = document.querySelector('table tbody');
+
+function updateSuppliersList(suppliers) {
+    suppliersTable.innerHTML = '';
+    
+    suppliers.forEach(supplier => {
+        const row = `
+            <tr>
+                <td>${supplier.name || ''}</td>
+                <td>${supplier.contact_person || ''}</td>
+                <td>${supplier.phone || ''}</td>
+                <td>${supplier.email || ''}</td>
+                <td>${supplier.company_name || ''}</td>
+                <td>${supplier.supplier_type || ''}</td>
+                <td>
+                    <span class="badge bg-${supplier.status === 'Active' ? 'success' : 'danger'}">
+                        ${supplier.status || ''}
+                    </span>
+                </td>
+                <td>${supplier.created_at || ''}</td>
+                <td>
+                    <a href="/edit_supplier/${supplier.id}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <form method="POST" action="/delete_supplier/${supplier.id}" style="display:inline;">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this supplier?');">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        `;
+        suppliersTable.innerHTML += row;
+    });
+}
+
+function performSearch() {
+    const searchTerm = searchInput.value;
+    const type = supplierTypeFilter.value;
+    const status = statusFilter.value;
+
+    // Clear previous timeout
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+    }
+
+    // Set new timeout
+    searchTimeout = setTimeout(() => {
+        fetch(`/search_suppliers?search=${encodeURIComponent(searchTerm)}&supplier_type=${encodeURIComponent(type)}&status=${encodeURIComponent(status)}`)
+            .then(response => response.json())
+            .then(suppliers => {
+                updateSuppliersList(suppliers);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }, 300); // 300ms delay
+}
+
+// Event listeners
+searchInput.addEventListener('input', performSearch);
+supplierTypeFilter.addEventListener('change', performSearch);
+statusFilter.addEventListener('change', performSearch);
+
+resetButton.addEventListener('click', () => {
+    searchInput.value = '';
+    supplierTypeFilter.value = '';
+    statusFilter.value = '';
+    performSearch();
+});
+
+// Initial load
+performSearch();
+</script>
+{% endblock %} 

@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chef Interface</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        body {
+            direction: ltr;
+            text-align: left;
+            padding-top: 60px;
+        }
+
+        /* Custom Item Styles */
+        .item-card {
+            background: linear-gradient(145deg, #ffffff, #f5f5f5);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .item-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .item-header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            padding: 1.25rem;
+            font-weight: 600;
+        }
+
+        .item-body {
+            padding: 1.5rem;
+        }
+
+        .item-form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .item-form-label {
+            color: #2c3e50;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .item-form-control {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .item-form-control:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+
+        .item-form-select {
+            background-color: white;
+            cursor: pointer;
+        }
+
+        .item-form-select:disabled {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+        }
+
+        .item-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .item-btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+        }
+
+        .item-btn-secondary:hover {
+            background-color: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .item-list {
+            margin-top: 1rem;
+        }
+
+        .item-list-group {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .item-list-item {
+            background-color: white;
+            border: 1px solid #e9ecef;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .item-list-item:hover {
+            background-color: #f8f9fa;
+            transform: translateX(5px);
+        }
+
+        .item-list-item h6 {
+            color: #2c3e50;
+            margin-bottom: 0.25rem;
+        }
+
+        .item-list-item small {
+            color: #6c757d;
+        }
+
+        .item-delete-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .item-delete-btn:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .item-alert {
+            background-color: #e3f2fd;
+            border: none;
+            border-radius: 8px;
+            padding: 1rem;
+            color: #0d47a1;
+        }
+
+        .item-checkbox {
+            margin-top: 1.5rem;
+        }
+
+        .item-checkbox .form-check-input {
+            width: 1.25rem;
+            height: 1.25rem;
+            margin-top: 0.25rem;
+        }
+
+        .item-checkbox .form-check-label {
+            color: #2c3e50;
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">Restaurant Inventory</a>
+            <div class="navbar-nav ms-auto">
+                <span class="nav-item nav-link text-light">
+                    Welcome {{ session.user.name }}
+                </span>
+                <a class="nav-item nav-link" href="{{ url_for('logout') }}">Logout</a>
+                <a class="nav-item nav-link" href="{{ url_for('stocktaking_interface') }}">Stocktaking</a>
+                <a class="nav-item nav-link" href="{{ url_for('create_invoice') }}">Create Invoice</a>
+                <a class="nav-item nav-link" href="{{ url_for('recipes') }}">Recipes</a>
+                <a class="nav-link active" href="{{ url_for('index') }}">Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h2>Submit Chef Report</h2>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <div class="card">
+            <div class="card-body">
+                <form action="{{ url_for('submit_report') }}" method="post" id="reportForm">
+                    <div class="mb-3">
+                        <label for="report_type" class="form-label">Report Type:</label>
+                        <select class="form-select" id="report_type" name="report_type" required>
+                            <option value="">Select Type</option>
+                            <option value="waste">Waste Report</option>
+                            <option value="creation">Creation Report</option>
+                            <option value="transfer">Transfer Request</option>
+                        </select>
+                    </div>
+
+                    <!-- Branch Selection for Transfer Requests -->
+                    <div id="transferBranchSelection" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="from_branch" class="form-label">From Branch:</label>
+                                    <select class="form-select" id="from_branch" name="from_branch">
+                                        <option value="">Select Branch</option>
+                                        {% for branch in branches %}
+                                            <option value="{{ branch }}" {% if branch == session.user.branch %}selected{% endif %}>{{ branch }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="to_branch" class="form-label">To Branch:</label>
+                                    <select class="form-select" id="to_branch" name="to_branch">
+                                        <option value="">Select Branch</option>
+                                        {% for branch in branches %}
+                                            <option value="{{ branch }}">{{ branch }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item Selection Section -->
+                    <div class="item-card">
+                        <div class="item-header">
+                            Add Items
+                        </div>
+                        <div class="item-body">
+                            <div id="itemSelectionForm">
+                                <div class="item-form-group">
+                                    <label for="item_sku" class="item-form-label">Product</label>
+                                    <select class="form-select product-select" id="item_sku" style="width:100%;" >
+                                        <option value="">Search Product...</option>
+                                    </select>
+                                    <small id="unit_text" class="form-text text-muted"></small>
+                                </div>
+
+                                <div class="item-form-group">
+                                    <label for="quantity" class="item-form-label">Quantity:</label>
+                                    <input type="number" class="form-control item-form-control" id="quantity" min="0.01" step="0.01">
+                                </div>
+
+                                <button type="button" class="item-btn item-btn-secondary" id="addItemBtn">
+                                    Add Item to List
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Selected Items List -->
+                    <div class="item-card">
+                        <div class="item-header">
+                            Selected Items
+                        </div>
+                        <div class="item-body">
+                            <div id="selectedItemsList" class="item-list">
+                                <!-- Selected items will be added here -->
+                            </div>
+                            <div id="noItemsMessage" class="item-alert">
+                                No items added yet
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="item-form-group">
+                        <label for="date" class="item-form-label">Date:</label>
+                        <input type="date" class="form-control item-form-control" id="date" name="date" required>
+                    </div>
+                    
+                    <div class="item-form-group">
+                        <label for="chef_name" class="item-form-label">Chef Name:</label>
+                        <input type="text" class="form-control item-form-control" id="chef_name" name="chef_name" value="{{ session.user.name }}" readonly>
+                    </div>
+                    
+                    <div class="item-checkbox form-check">
+                        <input type="checkbox" class="form-check-input" id="agree" required>
+                        <label class="form-check-label" for="agree">
+                            I confirm that the information provided is accurate
+                        </label>
+                    </div>
+
+                    <!-- Hidden input to store selected items data -->
+                    <input type="hidden" name="selected_items" id="selectedItemsData">
+                    
+                    <!-- Add these inside your <form> ... -->
+                    <input type="hidden" name="from_branch" id="hidden_from_branch">
+                    <input type="hidden" name="to_branch" id="hidden_to_branch">
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                            Submit Report
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const itemSelect = document.getElementById('item_sku');
+        const quantityInput = document.getElementById('quantity');
+        const unitText = document.getElementById('unit_text');
+        const addItemBtn = document.getElementById('addItemBtn');
+        const selectedItemsList = document.getElementById('selectedItemsList');
+        const noItemsMessage = document.getElementById('noItemsMessage');
+        const submitBtn = document.getElementById('submitBtn');
+        const selectedItemsData = document.getElementById('selectedItemsData');
+        const reportTypeSelect = document.getElementById('report_type');
+        const transferBranchSelection = document.getElementById('transferBranchSelection');
+        const fromBranchSelect = document.getElementById('from_branch');
+        const toBranchSelect = document.getElementById('to_branch');
+
+        // Store selected items
+        const selectedItems = [];
+
+        // Set current date as default
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date').value = today;
+
+        // Handle report type change
+        reportTypeSelect.addEventListener('change', function() {
+            if (this.value === 'transfer') {
+                transferBranchSelection.style.display = 'block';
+                fromBranchSelect.value = '{{ session.user.branch }}';
+            } else {
+                transferBranchSelection.style.display = 'none';
+            }
+            updateSubmitButton();
+        });
+
+        function updateSubmitButton() {
+            const isTransfer = reportTypeSelect.value === 'transfer';
+            const hasValidBranches = !isTransfer || (fromBranchSelect.value && toBranchSelect.value && fromBranchSelect.value !== toBranchSelect.value);
+            submitBtn.disabled = selectedItems.length === 0 || !document.getElementById('agree').checked || !hasValidBranches;
+        }
+
+        document.getElementById('agree').addEventListener('change', updateSubmitButton);
+        fromBranchSelect.addEventListener('change', updateSubmitButton);
+        toBranchSelect.addEventListener('change', updateSubmitButton);
+
+        // --- Select2 AJAX Product Search (like invoices) ---
+        let lastSelectedProduct = null;
+        $(itemSelect).select2({
+            placeholder: 'Search Product...',
+            allowClear: true,
+            minimumInputLength: 0,
+            ajax: {
+                url: '/get_all_products',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return { search: params.term };
+                },
+                processResults: function(data) {
+                    const items = data.items || [];
+                    return {
+                        results: items.map(item => ({
+                            id: item.ISBN,
+                            text: item['Item Name'],
+                            unit: item['Sales Unit & Purch Unit'],
+                            sku: item['SKU']
+                        }))
+                    };
+                },
+                cache: true
+            },
+            templateResult: function(item) {
+                if (!item.id) return item.text;
+                return $(
+                    `<div>
+                        <strong>${item.text}</strong>
+                        <div style="font-size:0.9em;color:#888;">
+                            SKU: ${item.sku || ''} | Unit: ${item.unit || ''}
+                        </div>
+                    </div>`
+                );
+            },
+            templateSelection: function(item) {
+                return item.text || item.id;
+            }
+        });
+
+        // When a product is selected, fill the unit field and store the product info
+        $(itemSelect).on('select2:select', function(e) {
+            const selectedOption = e.params.data;
+            unitText.textContent = 'Unit: ' + (selectedOption.unit || '');
+            lastSelectedProduct = selectedOption;
+        });
+        $(itemSelect).on('select2:clear', function() {
+            unitText.textContent = '';
+            lastSelectedProduct = null;
+        });
+
+        // --- Add Item to List ---
+        addItemBtn.addEventListener('click', function() {
+            const selectedOption = lastSelectedProduct;
+            const quantity = quantityInput.value;
+
+            if (!selectedOption || !selectedOption.id || !quantity || quantity <= 0) {
+                alert('Please select an item and enter a valid quantity');
+                return;
+            }
+
+            // Prevent duplicate items
+            if (selectedItems.some(item => item.sku === selectedOption.id)) {
+                alert('This item is already in the list.');
+                return;
+            }
+
+            const itemData = {
+                sku: selectedOption.id,
+                name: selectedOption.text,
+                quantity: quantity,
+                unit: selectedOption.unit
+            };
+
+            selectedItems.push(itemData);
+            selectedItemsData.value = JSON.stringify(selectedItems);
+            updateSelectedItemsList();
+
+            // Reset selection fields
+            $(itemSelect).val(null).trigger('change');
+            quantityInput.value = '';
+            unitText.textContent = '';
+            lastSelectedProduct = null;
+            updateSubmitButton();
+        });
+
+        function updateSelectedItemsList() {
+            selectedItemsList.innerHTML = '';
+
+            if (selectedItems.length === 0) {
+                noItemsMessage.style.display = 'block';
+            } else {
+                noItemsMessage.style.display = 'none';
+
+                selectedItems.forEach((item, index) => {
+                    const listItem = document.createElement('div');
+                    listItem.className = 'item-list-item d-flex justify-content-between align-items-center';
+                    listItem.innerHTML = `
+                        <div>
+                            <h6 class="mb-0">${item.name}</h6>
+                            <small class="text-muted">Quantity: ${item.quantity} ${item.unit}</small>
+                        </div>
+                        <button type="button" class="btn btn-danger btn-sm" data-index="${index}">
+                            Delete
+                        </button>
+                    `;
+
+                    listItem.querySelector('button').addEventListener('click', function() {
+                        selectedItems.splice(index, 1);
+                        selectedItemsData.value = JSON.stringify(selectedItems);
+                        updateSelectedItemsList();
+                        updateSubmitButton();
+                    });
+
+                    selectedItemsList.appendChild(listItem);
+                });
+            }
+            updateSubmitButton();
+        }
+    });
+    </script>
+</body>
+</html>

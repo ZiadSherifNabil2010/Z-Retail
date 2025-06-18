@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">System Management</h2>
+    
+    <div class="row">
+        <!-- Departments & Categories Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Departments & Categories</h5>
+                    <p class="card-text">Manage departments and their associated categories for inventory organization.</p>
+                    <a href="{{ url_for('departments_management') }}" class="btn btn-primary">Manage Departments</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Management Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Products Management</h5>
+                    <p class="card-text">Manage products and their information.</p>
+                    <a href="{{ url_for('products_management') }}" class="btn btn-primary">Manage Products</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Warehouse Management Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Warehouse Management</h5>
+                    <p class="card-text">Manage warehouses and their associated inventory.</p>
+                    <a href="{{ url_for('warehouses_management') }}" class="btn btn-primary">Manage Warehouses</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Units Management Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Units Management</h5>
+                    <p class="card-text">Manage custom units for your inventory items.</p>
+                    <a href="{{ url_for('units_management') }}" class="btn btn-primary">Manage Units</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Suppliers Management Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Suppliers Management</h5>
+                    <p class="card-text">Manage your suppliers and their information.</p>
+                    <a href="{{ url_for('suppliers_management') }}" class="btn btn-primary">Manage Suppliers</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card-title {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.card-text {
+    color: #666;
+    margin-bottom: 1.5rem;
+}
+
+.btn-primary {
+    background-color: #3498db;
+    border-color: #3498db;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+}
+</style>
+{% endblock %}

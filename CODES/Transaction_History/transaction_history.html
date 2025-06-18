@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2 class="mb-4">Transaction History</h2>
+
+    <!-- Product Selection -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="select-loading-overlay">
+                        <label for="productSelect" class="form-label d-flex align-items-center">
+                            Select Product
+                            <div class="spinner-container ms-2" id="loading-spinner" style="display: none;">
+                                <div class="spinner-border text-primary spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </label>
+                        <select id="productSelect" class="form-control" style="width: 100%;">
+                            <option value="">Type to search products...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="startDate">Start Date:</label>
+                    <input type="date" id="startDate" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="endDate">End Date:</label>
+                    <input type="date" id="endDate" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="transactionType">Transaction Type:</label>
+                    <select id="transactionType" class="form-control">
+                        <option value="all">All Transactions</option>
+                        <option value="purchase">Purchases</option>
+                        <option value="wastage">Wastage</option>
+                        <option value="transfer">Transfers</option>
+                        <option value="creation">Creation</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>&nbsp;</label>
+                    <button id="exportBtn" class="btn btn-success w-100">Export Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="transactionsTable" class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Document Type</th>
+                            <th>Reference</th>
+                            <th>Quantity</th>
+                            <th>Unit</th>
+                            <th>Price</th>
+                            <th>Total</th>
+                            <th>Branch</th>
+                            <th>Vendor/Customer</th>
+                            <th>Status</th>
+                            <th>Created By</th>
+                            <th>Last Updated</th>
+                            <th>Updated By</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsBody">
+                        <!-- Transactions will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add required CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<style>
+.select2-container--default .select2-selection--single {
+    height: 38px;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+}
+
+.select2-dropdown {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.select2-search--dropdown {
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.select2-search--dropdown .select2-search__field {
+    height: 38px;
+    padding: 8px 12px !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 4px !important;
+    width: 100% !important;
+    font-size: 14px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 36px;
+    padding-left: 12px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+
+.select2-results {
+    padding: 8px;
+}
+
+.select2-result-product {
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.select2-result-product__details {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+</style>
+
+<!-- Add required JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/xlsx.full.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialize Select2
+    $('#productSelect').select2({
+        placeholder: 'Type to search products...',
+        allowClear: true,
+        ajax: {
+            url: '/get_all_products',
+            dataType: 'json',
+            delay: 250,
+            beforeSend: function() {
+                $('#loading-spinner').show();
+            },
+            complete: function() {
+                $('#loading-spinner').hide();
+            },
+            data: function(params) {
+                return {
+                    search: params.term || '',
+                    page: params.page || 1
+                };
+            },
+            processResults: function(data) {
+                return {
+                    results: data.items.map(function(item) {
+                        return {
+                            id: item.ISBN,
+                            text: item['Item Name'],
+                            unit: item['Sales Unit & Purch Unit'],
+                            sku: item.SKU,
+                            category: item['Category Name']
+                        };
+                    })
+                };
+            },
+            cache: true
+        },
+        templateResult: formatProduct,
+        templateSelection: formatProductSelection
+    });
+
+    function formatProduct(product) {
+        if (!product.id) return product.text;
+        return $(`
+            <div class="select2-result-product">
+                <div class="select2-result-product__title fw-bold">${product.text}</div>
+                <div class="select2-result-product__details">
+                                       <div>ISBN: ${product.id || ''}</div>
+                </div>
+            </div>
+        `);
+    }
+
+    function formatProductSelection(product) {
+        if (!product.id) return product.text;
+        return `${product.text} (${product.id})`;
+    }
+
+    // Load transactions when product is selected
+    $('#productSelect').on('select2:select', function(e) {
+        loadTransactions();
+    });
+
+    // Load transactions when filters change
+    $('#startDate, #endDate, #transactionType').on('change', function() {
+        if ($('#productSelect').val()) {
+            loadTransactions();
+        }
+    });
+
+    function loadTransactions() {
+        const isbn = $('#productSelect').val();
+        const startDate = $('#startDate').val();
+        const endDate = $('#endDate').val();
+        const type = $('#transactionType').val();
+
+        if (!isbn) return;
+
+        $('#loading-spinner').show();
+        $('#transactionsBody').html('<tr><td colspan="14" class="text-center">Loading...</td></tr>');
+
+        $.get('/get_product_transactions', {
+            isbn: isbn,
+            start_date: startDate,
+            end_date: endDate,
+            type: type
+        })
+        .done(function(response) {
+            if (response.success) {
+                displayTransactions(response.transactions);
+            } else {
+                $('#transactionsBody').html(
+                    `<tr><td colspan="14" class="text-center text-danger">
+                        ${response.message || 'Error loading transactions'}
+                    </td></tr>`
+                );
+            }
+        })
+        .fail(function(error) {
+            $('#transactionsBody').html(
+                '<tr><td colspan="14" class="text-center text-danger">Error loading transactions</td></tr>'
+            );
+        })
+        .always(function() {
+            $('#loading-spinner').hide();
+        });
+    }
+
+    function displayTransactions(transactions) {
+        if (!transactions || transactions.length === 0) {
+            $('#transactionsBody').html(
+                '<tr><td colspan="14" class="text-center">No transactions found</td></tr>'
+            );
+            return;
+        }
+
+        const html = transactions.map(t => `
+            <tr>
+                <td>${t.date || '-'}</td>
+                <td>${t.type || '-'}</td>
+                <td>${t.document_type || '-'}</td>
+                <td>${t.transaction_id || '-'}</td>
+                <td>${t.quantity || '0'}</td>
+                <td>${t.unit || '-'}</td>
+                <td>${t.unit_price || '-'}</td>
+                <td>${t.total_amount || '-'}</td>
+                <td>${t.type === 'transfer' ? `${t.from_branch} → ${t.to_branch}` : (t.branch || '-')}</td>
+                <td>${t.vendor_name || '-'}</td>
+                <td>${t.status || '-'}</td>
+                <td>${t.created_by || '-'}</td>
+                <td>${t.last_updated || '-'}</td>
+                <td>${t.updated_by || '-'}</td>
+            </tr>
+        `).join('');
+
+        $('#transactionsBody').html(html);
+    }
+
+// Export functionality
+$('#exportBtn').click(function () {
+    if (!$('#productSelect').val()) {
+        alert('Please select a product first');
+        return;
+    }
+
+    const rows = [
+        ['Date', 'Type', 'Document Type', 'Reference', 'Quantity', 'Unit', 'Price', 'Total', 'Branch',
+            'Vendor/Customer', 'Status', 'Created By', 'Last Updated', 'Updated By']
+    ];
+
+    $('#transactionsTable tbody tr').each(function () {
+        const row = [];
+        $(this).find('td').each(function () {
+            row.push($(this).text().trim());
+        });
+        rows.push(row);
+    });
+
+    // Convert array of arrays to worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Transactions');
+
+    // Generate XLSX file and trigger download
+    const fileName = `transactions_${$('#productSelect').val()}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+});
+
+});
+</script>
+{% endblock %} 

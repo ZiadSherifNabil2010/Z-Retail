@@ -1,0 +1,238 @@
+{% set main_report = related_reports[0] if related_reports else report %}
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Report Details</h2>
+        <div>
+            <a href="{{ url_for('reports_interface') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Reports
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    {% if parent_report_id %}
+                        Report #{{ parent_report_id }}
+                    {% else %}
+                        Report #{{ main_report.report_id }}
+                    {% endif %}
+                </h5>
+                <div>
+                    <span class="badge {% if main_report.status == 'Pending' %}bg-warning{% elif main_report.status == 'Approved' %}bg-success{% elif main_report.status == 'Rejected' %}bg-danger{% else %}bg-secondary{% endif %}">
+                        {{ main_report.status }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2">Basic Information</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th style="width: 150px;">Report ID:</th>
+                            <td>
+                                {% if parent_report_id %}
+                                    {{ parent_report_id }}
+                                {% else %}
+                                    {{ main_report.report_id }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Type:</th>
+                            <td>
+                                {% if main_report.report_type == 'creation' %}
+                                    <span class="badge bg-success">Creation</span>
+                                {% elif main_report.report_type == 'waste' %}
+                                    <span class="badge bg-danger">Waste</span>
+                                {% elif main_report.report_type == 'transfer' %}
+                                    <span class="badge bg-info">Transfer</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ main_report.report_type }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Date:</th>
+                            <td>{{ main_report.date }}</td>
+                        </tr>
+                        <tr>
+                            <th>Created By:</th>
+                            <td>{{ main_report.chef_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Branch:</th>
+                            <td>{{ main_report.branch }}</td>
+                        </tr>
+                    </table>
+                </div>
+                {% if main_report.report_type == 'transfer' %}
+                <div class="col-md-6">
+                    <h6 class="border-bottom pb-2">Transfer Information</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th style="width: 150px;">From Branch:</th>
+                            <td>{{ main_report.from_branch }}</td>
+                        </tr>
+                        <tr>
+                            <th>To Branch:</th>
+                            <td>{{ main_report.to_branch }}</td>
+                        </tr>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+
+            <h6 class="border-bottom pb-2">Items</h6>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Report ID</th>
+                            <th>SKU</th>
+                            <th>Item Name</th>
+                            <th>Quantity</th>
+                            <th>Unit</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if related_reports %}
+                            {% for item in related_reports %}
+                            <tr>
+                                <td>{{ item.report_id }}</td>
+                                <td>{{ item.sku }}</td>
+                                <td>{{ item.item_name }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ item.unit }}</td>
+                                <td>
+                                    <span class="badge {% if item.item_status == 'Approved' %}bg-success{% elif item.item_status == 'Rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ item.item_status or 'Pending' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if not item.item_status or item.item_status == 'Pending' %}
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-success" onclick="updateItemStatus('{{ item.report_id }}', 'Approved')">
+                                            <i class="fas fa-check"></i> Approve
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="updateItemStatus('{{ item.report_id }}', 'Rejected')">
+                                            <i class="fas fa-times"></i> Reject
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td>{{ main_report.report_id }}</td>
+                                <td>{{ main_report.sku }}</td>
+                                <td>{{ main_report.item_name }}</td>
+                                <td>{{ main_report.quantity }}</td>
+                                <td>{{ main_report.unit }}</td>
+                                <td>
+                                    <span class="badge {% if main_report.item_status == 'Approved' %}bg-success{% elif main_report.item_status == 'Rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ main_report.item_status or 'Pending' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if not main_report.item_status or main_report.item_status == 'Pending' %}
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-success" onclick="updateItemStatus('{{ main_report.report_id }}', 'Approved')">
+                                            <i class="fas fa-check"></i> Approve
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="updateItemStatus('{{ main_report.report_id }}', 'Rejected')">
+                                            <i class="fas fa-times"></i> Reject
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateItemStatus(reportId, status) {
+    console.log('Updating status for report:', reportId, 'to:', status);
+    
+    if (confirm('Are you sure you want to ' + status.toLowerCase() + ' this item?')) {
+        const formData = new URLSearchParams();
+        formData.append('report_id', reportId);
+        formData.append('status', status);
+        
+        console.log('Sending data:', formData.toString());
+        
+        fetch("{{ url_for('update_report_item_status') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: formData
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                alert('Status updated successfully');
+                window.location.reload();
+            } else {
+                throw new Error(data.message || 'Failed to update status');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating status: ' + error.message);
+        });
+    }
+}
+</script>
+
+<style>
+.badge {
+    font-size: 0.9em;
+    padding: 0.5em 0.8em;
+}
+
+.table th {
+    background-color: #f8f9fa;
+}
+
+.table-sm td, .table-sm th {
+    padding: 0.5rem;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.btn-group {
+    margin-left: 0.5rem;
+}
+</style>
+{% endblock %} 

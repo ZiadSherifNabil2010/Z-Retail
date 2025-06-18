@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stocktaking System</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .navbar {
+            background-color: #343a40;
+        }
+        .selected-items {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .btn-primary {
+            background-color: #007bff;
+        }
+        .card {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .select2-container--default .select2-selection--single {
+            height: 38px;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 38px;
+            padding-left: 12px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px;
+        }
+        /* Loading spinner styles */
+        .spinner-container {
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        .spinner-border {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+        /* Loading overlay for item select */
+        .select-loading-overlay {
+            position: relative;
+        }
+        .select-loading-overlay.loading::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Restaurant Inventory System - Stocktaking</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('redirect_by_role') }}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('stocktaking_interface') }}">Stocktaking</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="row">
+            <!-- User Info Card -->
+            <div class="col-md-12 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">User Information</h5>
+                        <p class="card-text">User Name: {{ session['user']['name'] }}</p>
+                        <p class="card-text">Branch: {{ session['user']['branch'] }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stocktaking Form -->
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Perform Stocktaking</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="stocktakingForm" action="{{ url_for('submit_stocktaking') }}" method="POST">
+                            <div class="row mb-4">
+                                <div class="col-md-3">
+                                    <label for="date" class="form-label">Date</label>
+                                    <input type="date" class="form-control" id="date" name="date" required value="{{ today }}">
+                                 </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-12 select-loading-overlay">
+                                    <label for="item" class="form-label d-flex align-items-center">
+                                        Select Item
+                                        <div class="spinner-container ms-2" id="loading-spinner" style="display: none;">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                        </div>
+                                    </label>
+                                    <select class="form-select" id="item" style="width:100%;">
+                                        <option value="">-- Select Item --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3" id="quantity-section" style="display: none;">
+                              <div class="col-md-4">
+                                    <label for="expected-quantity" class="form-label">System Quantity</label>
+                                    <input type="text" class="form-control" id="expected-quantity" value="Unknown" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="actual-quantity" class="form-label">Physical Quantity</label>
+                                    <input type="number" class="form-control" id="actual-quantity" min="0" step="0.01" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="unit" class="form-label">Unit</label>
+                                    <input type="text" class="form-control" id="unit" readonly>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <button type="button" id="add-item" class="btn btn-success" style="display: none;">Add Item</button>
+                            </div>
+
+                            <!-- Selected Items Table -->
+                            <div class="selected-items mt-4" id="selected-items-container" style="display: none;">
+                                <h5>Selected Items</h5>
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>SKU</th>
+                                            <th>Item Name</th>
+                                            <th>System Quantity</th>
+                                            <th>Physical Quantity</th>
+                                            <th>Unit</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="selected-items">
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <input type="hidden" id="selected_items" name="selected_items" value="[]">
+
+                            <div class="text-center mt-4">
+                                <button type="submit" class="btn btn-primary" id="submit-btn" disabled>Submit Stocktaking Report</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and Select2 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const itemSelect = document.getElementById('item');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const quantitySection = document.getElementById('quantity-section');
+            const expectedQuantityInput = document.getElementById('expected-quantity');
+            const actualQuantityInput = document.getElementById('actual-quantity');
+            const unitInput = document.getElementById('unit');
+            const addItemBtn = document.getElementById('add-item');
+            const selectedItemsContainer = document.getElementById('selected-items-container');
+            const selectedItemsTable = document.getElementById('selected-items');
+            const selectedItemsInput = document.getElementById('selected_items');
+            const submitBtn = document.getElementById('submit-btn');
+            
+            // Array to store selected items
+            const selectedItems = [];
+            
+            // Set today's date as default
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('date').value = today;
+            
+            // Initialize Select2 for item selection (like in invoices)
+            $(itemSelect).select2({
+                placeholder: 'Search Product...',
+                allowClear: true,
+                minimumInputLength: 0,
+                ajax: {
+                    url: '/get_all_products',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) {
+                        return { search: params.term };
+                    },
+                    processResults: function(data) {
+                        const items = data.items || [];
+                        return {
+                            results: items.map(item => ({
+                                id: item.ISBN,
+                                text: item['Item Name'],
+                                unit: item['Sales Unit & Purch Unit'],
+                                sku: item['SKU']
+                            }))
+                        };
+                    },
+                    cache: true
+                },
+                templateResult: function(item) {
+                    if (!item.id) return item.text;
+                    return $(
+                        `<div>
+                            <strong>${item.text}</strong>
+                            <div style="font-size:0.9em;color:#888;">
+                                SKU: ${item.sku || ''} | Unit: ${item.unit || ''}
+                            </div>
+                        </div>`
+                    );
+                },
+                templateSelection: function(item) {
+                    return item.text || item.id;
+                }
+            });
+
+            // When a product is selected, fill the unit field
+            $(itemSelect).on('select2:select', function(e) {
+                const selectedOption = e.params.data;
+                unitInput.value = selectedOption.unit || '';
+                quantitySection.style.display = 'flex';
+                addItemBtn.style.display = 'block';
+                expectedQuantityInput.value = 'Unknown';
+                actualQuantityInput.value = '';
+                const existingItem = selectedItems.find(item => item.sku === selectedOption.id);
+                if (existingItem) {
+                    actualQuantityInput.value = existingItem.actual_quantity;
+                }
+            });
+
+            // Event listener for add item button
+            addItemBtn.addEventListener('click', function() {
+                const selectedOption = $(itemSelect).select2('data')[0];
+                if (!selectedOption) {
+                    alert('Please select an item');
+                    return;
+                }
+
+                const sku = selectedOption.id;
+                const name = selectedOption.text;
+                const unit = selectedOption.unit;
+                const actualQuantity = parseFloat(actualQuantityInput.value);
+                
+                if (!actualQuantity) {
+                    alert('Please enter the physical quantity');
+                    return;
+                }
+                
+                // Check if item is already in the selected items
+                const existingItemIndex = selectedItems.findIndex(item => item.sku === sku);
+                
+                if (existingItemIndex !== -1) {
+                    // Update existing item
+                    selectedItems[existingItemIndex].actual_quantity = actualQuantity;
+                } else {
+                    // Add new item
+                    selectedItems.push({
+                        sku: sku,
+                        name: name,
+                        expected_quantity: 'Unknown',
+                        actual_quantity: actualQuantity,
+                        unit: unit
+                    });
+                }
+                
+                // Update the hidden input with selected items
+                selectedItemsInput.value = JSON.stringify(selectedItems);
+                
+                // Refresh the selected items table
+                refreshSelectedItems();
+                
+                // Reset inputs for next item
+                $(itemSelect).val(null).trigger('change');
+                quantitySection.style.display = 'none';
+                addItemBtn.style.display = 'none';
+            });
+            
+            // Function to refresh selected items table
+            function refreshSelectedItems() {
+                selectedItemsTable.innerHTML = '';
+                
+                if (selectedItems.length === 0) {
+                    selectedItemsContainer.style.display = 'none';
+                    submitBtn.disabled = true;
+                    return;
+                }
+                
+                selectedItemsContainer.style.display = 'block';
+                submitBtn.disabled = false;
+                
+                selectedItems.forEach((item, index) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${item.sku}</td>
+                        <td>${item.name}</td>
+                        <td>Unknown</td>
+                        <td>${item.actual_quantity}</td>
+                        <td>${item.unit}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-danger remove-btn" data-index="${index}">
+                                Delete
+                            </button>
+                            <button type="button" class="btn btn-sm btn-primary edit-btn" data-index="${index}">
+                                Edit
+                            </button>
+                        </td>
+                    `;
+                    selectedItemsTable.appendChild(tr);
+                });
+                
+                // Add event listeners for edit and remove buttons
+                document.querySelectorAll('.remove-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const index = parseInt(this.dataset.index);
+                        selectedItems.splice(index, 1);
+                        selectedItemsInput.value = JSON.stringify(selectedItems);
+                        refreshSelectedItems();
+                    });
+                });
+                
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const index = parseInt(this.dataset.index);
+                        const item = selectedItems[index];
+                        // Set the item in the dropdown
+                        const option = new Option(item.name, item.sku, true, true);
+                        $(itemSelect).append(option).trigger('change');
+                        // Fill in quantities
+                        actualQuantityInput.value = item.actual_quantity;
+                        // Show quantity section and add button
+                        quantitySection.style.display = 'flex';
+                        addItemBtn.style.display = 'block';
+                    });
+                });
+            }
+
+            // Form submission handler
+            document.getElementById('stocktakingForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (selectedItems.length === 0) {
+                    alert('Please add at least one item to the stocktaking report');
+                    return;
+                }
+
+                // Prepare the form data
+                const formData = {
+                    date: document.getElementById('date').value,
+                    items: selectedItems,
+                    branch: '{{ session.user.branch }}',
+                    user_name: '{{ session.user.name }}'
+                };
+
+                // Send the data to the server
+                fetch('/submit_stocktaking', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Stocktaking report submitted successfully');
+                        window.location.href = '/chef';  // Redirect to chef interface
+                    } else {
+                        alert('Error submitting stocktaking report: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error submitting stocktaking report. Please try again.');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

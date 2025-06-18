@@ -1,0 +1,218 @@
+<!-- templates/vendors.html -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الموردين</title>
+    <!-- Bootstrap RTL CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .navbar {
+            background-color: #343a40;
+        }
+        .btn-primary {
+            background-color: #007bff;
+        }
+        .card {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        .search-container {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">نظام مخزون المطعم - إدارة الموردين</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">الرئيسية</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('vendors_interface') }}">الموردين</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">تسجيل الخروج</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- User Info Card -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">معلومات المستخدم</h5>
+                        <p class="card-text">اسم المستخدم: {{ session['user']['name'] }}</p>
+                        <p class="card-text">الدور: {{ session['user']['role'] }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Vendors Management Card -->
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">قائمة الموردين</h5>
+                <a href="{{ url_for('add_vendor') }}" class="btn btn-light">
+                    <i class="fas fa-plus"></i> إضافة مورد جديد
+                </a>
+            </div>
+            <div class="card-body">
+                <!-- Search Box -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <input type="text" id="vendorSearch" class="form-control" placeholder="بحث عن مورد...">
+                    </div>
+                </div>
+
+                <!-- Vendors Table -->
+                <div class="table-container">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>كود المورد</th>
+                                <th>اسم المورد</th>
+                                <th>رقم المورد</th>
+                                <th>رقم الضريبة</th>
+                                <th>ضريبة القيمة المضافة</th>
+                                <th>نوع الدفع</th>
+                                <th>مدة الدفع</th>
+                                <th>مجموعة المورد</th>
+                                <th>الحد الائتماني</th>
+                                <th>جهة الاتصال</th>
+                                <th>رقم الهاتف</th>
+                                <th>البريد الإلكتروني</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vendorsTable">
+                            {% for vendor in vendors %}
+                            <tr>
+                                <td>{{ vendor['Vendor Code'] }}</td>
+                                <td>{{ vendor['Vendor Name'] }}</td>
+                                <td>{{ vendor['Vendor ID'] }}</td>
+                                <td>{{ vendor['Tax Number'] }}</td>
+                                <td>{{ vendor['Vat'] }}</td>
+                                <td>{{ vendor['Type Of Payment'] }}</td>
+                                <td>{{ vendor['Term Of Payment'] }}</td>
+                                <td>{{ vendor['Vendor Group'] }}</td>
+                                <td>{{ vendor['Creadited Limet'] }}</td>
+                                <td>{{ vendor['Contact Person'] }}</td>
+                                <td>{{ vendor['Phone Number'] }}</td>
+                                <td>{{ vendor['Email'] }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('edit_vendor', vendor_code=vendor['Vendor Code']) }}" 
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-danger" 
+                                                onclick="confirmDelete('{{ vendor['Vendor Code'] }}', '{{ vendor['Vendor Name'] }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if not vendors %}
+                            <tr>
+                                <td colspan="13" class="text-center">لا يوجد موردين</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تأكيد الحذف</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    هل أنت متأكد من رغبتك في حذف المورد <span id="vendorNameToDelete"></span>؟
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <form id="deleteForm" method="POST">
+                        <button type="submit" class="btn btn-danger">حذف</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/js/all.min.js"></script>
+    <script>
+        // Search functionality
+        document.getElementById('vendorSearch').addEventListener('keyup', function() {
+            const searchText = this.value.toLowerCase();
+            const table = document.getElementById('vendorsTable');
+            const rows = table.getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                let found = false;
+                
+                for (let j = 0; j < cells.length; j++) {
+                    const cellText = cells[j].innerText.toLowerCase();
+                    if (cellText.indexOf(searchText) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                row.style.display = found ? '' : 'none';
+            }
+        });
+        
+        // Delete confirmation
+        function confirmDelete(vendorCode, vendorName) {
+            document.getElementById('vendorNameToDelete').textContent = vendorName;
+            document.getElementById('deleteForm').action = "/delete_vendor/" + vendorCode;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+    </script>
+</body>
+</html>

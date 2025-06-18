@@ -1,0 +1,205 @@
+<!-- templates/edit_vendor.html -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تعديل بيانات المورد</title>
+    <!-- Bootstrap RTL CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .navbar {
+            background-color: #343a40;
+        }
+        .btn-primary {
+            background-color: #007bff;
+        }
+        .card {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-label {
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">نظام مخزون المطعم - تعديل بيانات المورد</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">الرئيسية</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('vendors_interface') }}">الموردين</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">تسجيل الخروج</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- User Info Card -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">معلومات المستخدم</h5>
+                        <p class="card-text">اسم المستخدم: {{ session['user']['name'] }}</p>
+                        <p class="card-text">الدور: {{ session['user']['role'] }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Edit Vendor Form Card -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">تعديل بيانات المورد</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('edit_vendor', vendor_code=vendor['Vendor Code']) }}" class="needs-validation" novalidate>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="vendor_name" class="form-label">اسم المورد *</label>
+                            <input type="text" class="form-control" id="vendor_name" name="vendor_name" value="{{ vendor['Vendor Name'] }}" required>
+                            <div class="invalid-feedback">
+                                يرجى إدخال اسم المورد
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="vendor_id" class="form-label">رقم المورد</label>
+                            <input type="text" class="form-control" id="vendor_id" name="vendor_id" value="{{ vendor['Vendor ID'] }}">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="tax_number" class="form-label">رقم الضريبة</label>
+                            <input type="text" class="form-control" id="tax_number" name="tax_number" value="{{ vendor['Tax Number'] }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="vat" class="form-label">ضريبة القيمة المضافة</label>
+                            <select class="form-select" id="vat" name="vat">
+                                {% for vat in vats %}
+                                <option value="{{ vat }}" {% if vendor['Vat'] == vat %}selected{% endif %}>{{ vat }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="type_of_payment" class="form-label">نوع الدفع</label>
+                            <select class="form-select" id="type_of_payment" name="type_of_payment">
+                                <option value="Cash" {% if vendor['Type Of Payment'] == 'Cash' %}selected{% endif %}>Cash</option>
+                                <option value="Credit" {% if vendor['Type Of Payment'] == 'Credit' %}selected{% endif %}>Credit</option>
+                                <option value="Bank Transfer" {% if vendor['Type Of Payment'] == 'Bank Transfer' %}selected{% endif %}>Bank Transfer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="term_of_payment" class="form-label">مدة الدفع</label>
+                            <select class="form-select" id="term_of_payment" name="term_of_payment">
+                                {% for term in terms_of_payment %}
+                                <option value="{{ term }}" {% if vendor['Term Of Payment'] == term %}selected{% endif %}>{{ term }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="vendor_group" class="form-label">مجموعة المورد</label>
+                            <select class="form-select" id="vendor_group" name="vendor_group">
+                                {% for group in vendor_groups %}
+                                <option value="{{ group }}" {% if vendor['Vendor Group'] == group %}selected{% endif %}>{{ group }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="credited_limit" class="form-label">الحد الائتماني</label>
+                            <input type="number" class="form-control" id="credited_limit" name="credited_limit" value="{{ vendor['Creadited Limet'] }}">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="contact_person" class="form-label">جهة الاتصال</label>
+                            <input type="text" class="form-control" id="contact_person" name="contact_person" value="{{ vendor['Contact person'] }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="phone_number" class="form-label">رقم الهاتف</label>
+                            <input type="text" class="form-control" id="phone_number" name="phone_number" value="{{ vendor['Phone Number'] }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="email" class="form-label">البريد الإلكتروني</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ vendor['Email'] }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> حفظ التغييرات
+                        </button>
+                        <a href="{{ url_for('vendors_interface') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> إلغاء
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/js/all.min.js"></script>
+    <script>
+        // Form validation
+        (function() {
+            'use strict';
+            
+            const forms = document.querySelectorAll('.needs-validation');
+            
+            Array.from(forms).forEach(form => {
+                form.addEventListener('submit', event => {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
+        })();
+    </script>
+</body>
+</html> 

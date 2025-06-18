@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Pickup Screen</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: #1e293b;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(30, 64, 175, 0.25);
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            animation: shine 3s infinite;
+        }
+        
+        @keyframes shine {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .header-title {
+            position: relative;
+            z-index: 2;
+            font-size: 3.2rem;
+            font-weight: 800;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .order-container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 25px;
+        }
+        
+        .order-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .order-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(30, 64, 175, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 25px rgba(30, 64, 175, 0.08);
+        }
+        
+        .order-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(30, 64, 175, 0.15);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+        
+        .order-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        }
+        
+        .order-number {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 4px 8px rgba(30, 64, 175, 0.1);
+        }
+        
+        .order-status {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: 20px 0;
+            padding: 15px 20px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-preparing {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #92400e;
+            border: 1px solid #f59e0b;
+        }
+        
+        .status-ready {
+            background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+            color: #166534;
+            border: 1px solid #22c55e;
+            animation: readyGlow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes readyGlow {
+            from { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.2); }
+            to { box-shadow: 0 8px 30px rgba(34, 197, 94, 0.4); }
+        }
+        
+        .order-items {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .order-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #475569;
+        }
+        
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        
+        .waiting-time {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-top: 20px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .waiting-time.normal {
+            background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+            color: #166534;
+            border: 1px solid #22c55e;
+        }
+        
+        .waiting-time.orange {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #92400e;
+            border: 1px solid #f59e0b;
+        }
+        
+        .waiting-time.red {
+            background: linear-gradient(135deg, #fecaca, #fca5a5);
+            color: #991b1b;
+            border: 1px solid #ef4444;
+            animation: urgentPulse 1.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes urgentPulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.03); }
+        }
+        
+        .clock-icon {
+            width: 18px;
+            height: 18px;
+            border: 2px solid currentColor;
+            border-radius: 50%;
+            position: relative;
+        }
+        
+        .clock-icon::before {
+            content: '';
+            position: absolute;
+            top: 1px;
+            left: 50%;
+            width: 1px;
+            height: 6px;
+            background: currentColor;
+            transform: translateX(-50%);
+        }
+        
+        .clock-icon::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 50%;
+            width: 1px;
+            height: 4px;
+            background: currentColor;
+            transform: translateX(-50%);
+        }
+        
+        @media (max-width: 768px) {
+            .order-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .order-number {
+                font-size: 3rem;
+            }
+            
+            .header-title {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-title">Order Pickup</div>
+    </div>
+    
+    <div class="order-container">
+        <div class="order-grid">
+            {% for order in orders %}
+            {% if order.order_type == 'take-away' %}
+            <div class="order-card">
+                <div class="order-number">
+                    #{{ order.id }}
+                </div>
+                <div class="order-item">
+                    please come to pickup your order
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh the page every 5 seconds
+        setTimeout(function() {
+            window.location.reload();
+        }, 5000);
+        
+        // Add entrance animations
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.order-card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>

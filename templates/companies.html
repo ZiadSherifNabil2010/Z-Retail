@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Companies</h1>
+    <form method="POST" action="{{ url_for('add_company') }}" class="mb-3">
+        <div class="row g-2">
+            <div class="col">
+                <input type="text" name="name" class="form-control" placeholder="Company Name" required>
+            </div>
+            <div class="col">
+                <select name="period" class="form-select">
+                    <option value="yearly">Yearly</option>
+                    <option value="quarterly">Quarterly</option>
+                </select>
+            </div>
+            <div class="col">
+                <button type="submit" class="btn btn-primary">Add Company</button>
+            </div>
+        </div>
+    </form>
+
+    <h2>Add User to Company</h2>
+    <form method="POST" action="{{ url_for('add_user_to_company_route') }}" class="mb-3">
+        <div class="row g-2">
+            <div class="col">
+                <input type="email" name="email" class="form-control" placeholder="Email" required>
+            </div>
+            <div class="col">
+                <input type="text" name="name" class="form-control" placeholder="Name" required>
+            </div>
+            <div class="col">
+                <select name="account_type" id="account_type" class="form-select" required onchange="toggleBranchField()">
+                    <option value="">Select Account Type</option>
+                    <option value="branch">Branch</option>
+                    <option value="hq">HQ</option>
+                </select>
+            </div>
+            <div class="col">
+                <select name="company_id" class="form-select" required onchange="updateCompanyName(this)">
+                    <option value="">Select Company</option>
+                    {% for company_id, company in companies.items() %}
+                        <option value="{{ company_id }}" data-name="{{ company.name }}">{{ company.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="hidden" name="company_name" id="company_name">
+            </div>
+            <div class="col">
+                <input type="password" name="password" class="form-control" placeholder="Password" required>
+            </div>
+            <div class="col">
+                <div class="form-group" id="branchNameGroup" style="display: none;">
+                    <input type="text" class="form-control" id="branch_name" name="branch_name" placeholder="Branch Name">
+                </div>
+            </div>
+            <div class="col">
+                <button type="submit" class="btn btn-primary">Add User</button>
+            </div>
+        </div>
+    </form>
+
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Subscription Status</th>
+                <th>Renewal Date</th>
+                <th>Period</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for company_id, company in companies.items() %}
+            <tr>
+                <td>{{ company.name }}</td>
+                <td>{{ company.subscription.status }}</td>
+                <td>{{ company.subscription.renewal_date }}</td>
+                <td>{{ company.subscription.period }}</td>
+                <td>
+                    <a href="{{ url_for('view_company_users', company_id=company_id) }}" class="btn btn-info btn-sm">View Users</a>
+                    <form method="POST" action="{{ url_for('delete_company', company_id=company_id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this company?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function toggleBranchField() {
+    const accountTypeSelect = document.getElementById('account_type');
+    const branchNameGroup = document.getElementById('branchNameGroup');
+    
+    if (accountTypeSelect.value === 'branch') {
+        branchNameGroup.style.display = 'block';
+        document.getElementById('branch_name').required = true;
+    } else {
+        branchNameGroup.style.display = 'none';
+        document.getElementById('branch_name').required = false;
+    }
+}
+
+function updateCompanyName(select) {
+    const selectedOption = select.options[select.selectedIndex];
+    document.getElementById('company_name').value = selectedOption.getAttribute('data-name');
+}
+
+// Add this to make sure the field is shown/hidden correctly on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleBranchField();
+});
+</script>
+{% endblock %} 

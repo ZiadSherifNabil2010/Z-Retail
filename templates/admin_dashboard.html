@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">Admin Dashboard</h2>
+
+    <!-- Branches List -->
+    <div class="row mb-4">
+        <div class="col">
+            <h4>Branches</h4>
+            {% if branches %}
+                <ul class="list-group">
+                    {% for branch in branches %}
+                        <li class="list-group-item">
+                            {{ branch.name }}
+                            {% if branch.status %}
+                                <span class="badge bg-success ms-2">{{ branch.status|capitalize }}</span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="alert alert-info mt-2">No branches found for this company.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Debug Information -->
+    {% if branches %}
+    <div class="alert alert-info">
+        <p>Number of branches: {{ branches|length }}</p>
+        <p>Branches: {{ branches|join(', ') }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Branch Cards -->
+    <div class="row">
+        {% for branch, data in branch_data.items() %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">{{ branch }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Reports Section -->
+                        <div class="col-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted">Reports</h6>
+                                    <p class="card-text">
+                                        Total Reports: {{ data.stats.total_reports }}<br>
+                                        Pending Reports: {{ data.stats.pending_reports }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Stocktaking Section -->
+                        <div class="col-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted">Stocktaking</h6>
+                                    <p class="card-text">
+                                        Total Stocktaking: {{ data.stats.total_stocktaking }}<br>
+                                        Pending Review: {{ data.stats.pending_stocktaking }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Purchase Orders Section -->
+                        <div class="col-6 mb-3">
+                            <div class="card bg-light construction-card">
+                                <div class="construction-tape">
+                                    <div class="tape-text">DO NOT TOUCH</div>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted">Purchase Orders</h6>
+                                    <p class="card-text construction-text">
+                                        Under Development
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Vendors Section -->
+                        <div class="col-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted">Vendors</h6>
+                                    <p class="card-text">
+                                        Total Vendors: {{ data.vendors|length }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="btn-group w-100">
+                        <a href="{{ url_for('reports_interface') }}?branch={{ branch }}" class="btn btn-outline-primary">Reports</a>
+                        <a href="{{ url_for('accountant_interface') }}?branch={{ branch }}" class="btn btn-outline-primary">Stocktaking</a>
+                        <a href="{{ url_for('purchase_orders') }}?branch={{ branch }}" class="btn btn-outline-primary">Purchase Orders</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Summary Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">System Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-subtitle mb-2 text-muted">Total Reports</h6>
+                                    <h3 class="card-title">{{ reports|length }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-subtitle mb-2 text-muted">Total Stocktaking</h6>
+                                    <h3 class="card-title">{{ stocktaking_reports|length }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-subtitle mb-2 text-muted">Total Purchase Orders</h6>
+                                    <h3 class="card-title">{{ purchase_orders|length }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-subtitle mb-2 text-muted">Total Vendors</h6>
+                                    <h3 class="card-title">{{ vendors|length }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.badge {
+    font-size: 0.9em;
+    padding: 0.5em 0.8em;
+}
+
+.btn-group .btn {
+    flex: 1;
+}
+
+/* Construction Theme Styles */
+.construction-card {
+    position: relative;
+    overflow: hidden;
+    border: 2px dashed #ffc107;
+    transition: all 0.3s ease;
+}
+
+.construction-card:hover {
+    transform: translateY(-5px) rotate(1deg);
+    box-shadow: 0 8px 16px rgba(255, 193, 7, 0.3);
+    border-color: #ff9800;
+}
+
+.construction-tape {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        45deg,
+        #ff0000,
+        #ff0000 10px,
+        #ffffff 10px,
+        #ffffff 20px
+    );
+    opacity: 0.15;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 1;
+}
+
+.tape-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    color: #ff0000;
+    font-weight: bold;
+    font-size: 1.2em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-shadow: 2px 2px 0 #ffffff;
+    opacity: 0.8;
+    letter-spacing: 2px;
+}
+
+.construction-card:hover .construction-tape {
+    opacity: 0.25;
+    transform: scale(1.1);
+    animation: tape-shine 1.5s infinite;
+}
+
+.construction-text {
+    color: #856404;
+    font-weight: bold;
+    text-align: center;
+    padding: 10px;
+    background-color: rgba(255, 193, 7, 0.1);
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 2;
+}
+
+.construction-card:hover .construction-text {
+    background-color: rgba(255, 193, 7, 0.2);
+    transform: scale(1.05);
+    text-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
+}
+
+@keyframes tape-shine {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 40px 40px;
+    }
+}
+</style>
+{% endblock %} 

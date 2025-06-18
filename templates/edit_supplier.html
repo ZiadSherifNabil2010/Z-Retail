@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Edit Supplier</h2>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('edit_supplier', supplier_id=supplier.id) }}">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <input type="text" name="name" class="form-control" placeholder="Supplier Name *" value="{{ supplier.name }}" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <input type="text" name="contact_person" class="form-control" placeholder="Contact Person Name" value="{{ supplier.contact_person }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <input type="tel" name="phone" class="form-control" placeholder="Phone Number" value="{{ supplier.phone }}">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <input type="email" name="email" class="form-control" placeholder="Email Address" value="{{ supplier.email }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <input type="text" name="company_name" class="form-control" placeholder="Company Name" value="{{ supplier.company_name }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <select name="supplier_type" class="form-control">
+                            <option value="">Select Supplier Type</option>
+                            <option value="Raw Materials" {% if supplier.supplier_type == 'Raw Materials' %}selected{% endif %}>Raw Materials</option>
+                            <option value="Packaging" {% if supplier.supplier_type == 'Packaging' %}selected{% endif %}>Packaging</option>
+                            <option value="Equipment" {% if supplier.supplier_type == 'Equipment' %}selected{% endif %}>Equipment</option>
+                            <option value="Other" {% if supplier.supplier_type == 'Other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <input type="text" name="address" class="form-control" placeholder="Address" value="{{ supplier.address }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <select name="payment_terms" class="form-control">
+                            <option value="">Select Payment Terms</option>
+                            <option value="Cash" {% if supplier.payment_terms == 'Cash' %}selected{% endif %}>Cash</option>
+                            <option value="Net 30" {% if supplier.payment_terms == 'Net 30' %}selected{% endif %}>Net 30</option>
+                            <option value="Net 60" {% if supplier.payment_terms == 'Net 60' %}selected{% endif %}>Net 60</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <select name="status" class="form-control">
+                            <option value="Active" {% if supplier.status == 'Active' %}selected{% endif %}>Active</option>
+                            <option value="Inactive" {% if supplier.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <textarea name="notes" class="form-control" placeholder="Notes" rows="2">{{ supplier.notes }}</textarea>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Update Supplier</button>
+                        <a href="{{ url_for('suppliers_management') }}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

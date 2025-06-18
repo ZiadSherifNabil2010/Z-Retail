@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Analytics</h1>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="alert alert-primary">Total Companies: {{ total_companies }}</div>
+        </div>
+        <div class="col-md-3">
+            <div class="alert alert-success">Active Companies: {{ active_companies }}</div>
+        </div>
+        <div class="col-md-3">
+            <div class="alert alert-info">Total Branches: {{ total_branches }}</div>
+        </div>
+        <div class="col-md-3">
+            <div class="alert alert-danger">Expired Branches: {{ expired_branches }}</div>
+        </div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <canvas id="companyPie"></canvas>
+        </div>
+        <div class="col-md-6">
+            <canvas id="branchPie"></canvas>
+        </div>
+    </div>
+</div>
+<script>
+    // Example data, replace with real data as needed
+    const companyPie = new Chart(document.getElementById('companyPie'), {
+        type: 'pie',
+        data: {
+            labels: ['Active', 'Inactive'],
+            datasets: [{
+                data: [{{ active_companies }}, {{ total_companies - active_companies }}],
+                backgroundColor: ['#28a745', '#dc3545']
+            }]
+        }
+    });
+    const branchPie = new Chart(document.getElementById('branchPie'), {
+        type: 'pie',
+        data: {
+            labels: ['Expired', 'Active'],
+            datasets: [{
+                data: [{{ expired_branches }}, {{ total_branches - expired_branches }}],
+                backgroundColor: ['#dc3545', '#28a745']
+            }]
+        }
+    });
+</script>
+{% endblock %} 

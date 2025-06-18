@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <h2>PO Details - {{ invoice.invoice_number }}</h2>
+        <div>
+            {% if invoice.status == 'Active' and session.user.role in ['manager', 'accountant', 'super_admin'] %}
+            <button class="btn btn-success me-2" onclick="updateInvoiceStatus('Approved')">
+                <i class="fas fa-check"></i> Approve
+            </button>
+            <button class="btn btn-danger me-2" onclick="updateInvoiceStatus('Declined')">
+                <i class="fas fa-times"></i> Decline
+            </button>
+            {% endif %}
+            <a href="{{ url_for('view_invoices') }}" class="btn btn-secondary">Back to PO</a>
+        </div>
+    </div>
+
+    <!-- Print Header -->
+    <div class="print-header d-none">
+        <div class="row">
+            <div class="col-6">
+                <h1 class="company-name">Z-Retail</h1>
+                <p class="company-details">
+                    <strong>Tax Registration Number:</strong> {{ invoice.vendor_tax_number }}<br>
+                    <strong>VAT Number:</strong> {{ invoice.vendor_vat }}<br>
+                    <strong>Branch:</strong> {{ invoice.branch }}
+                </p>
+            </div>
+            <div class="col-6 text-end">
+                <h2 class="invoice-title">PO</h2>
+                <p class="invoice-details">
+                    <strong>PO #:</strong> {{ invoice.invoice_number }}<br>
+                    <strong>Date:</strong> {{ invoice.date }}<br>
+                    <strong>Document Type:</strong> {{ invoice.document_type }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Regular View -->
+    <div class="row mb-3 no-print">
+        <div class="col-md-6">
+            <h6>Basic Information</h6>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><strong>Date:</strong> {{ invoice.date }}</li>
+                <li class="list-group-item"><strong>Branch:</strong> {{ invoice.branch }}</li>
+                <li class="list-group-item"><strong>Document Type:</strong> {{ invoice.document_type }}</li>
+                <li class="list-group-item"><strong>Report #:</strong> {{ invoice.report_number }}</li>
+                <li class="list-group-item"><strong>Created By:</strong> {{ invoice.created_by }}</li>
+                <li class="list-group-item"><strong>Created At:</strong> {{ invoice.created_at }}</li>
+                <li class="list-group-item">
+                    <strong>Status:</strong> 
+                    <span class="badge {% if invoice.status == 'Approved' %}bg-success{% elif invoice.status == 'Declined' %}bg-danger{% else %}bg-primary{% endif %}">
+                        {{ invoice.status }}
+                    </span>
+                </li>
+                {% if invoice.status != 'Active' %}
+                <li class="list-group-item"><strong>Reviewed By:</strong> {{ invoice.reviewed_by }}</li>
+                <li class="list-group-item"><strong>Review Date:</strong> {{ invoice.review_date }}</li>
+                {% endif %}
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h6>Vendor Information</h6>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><strong>Name:</strong> {{ invoice.vendor_name }}</li>
+                <li class="list-group-item"><strong>Tax #:</strong> {{ invoice.vendor_tax_number }}</li>
+                <li class="list-group-item"><strong>VAT:</strong> {{ invoice.vendor_vat }}</li>
+                <li class="list-group-item"><strong>Payment Terms:</strong> {{ invoice.vendor_payment_terms }}</li>
+                <li class="list-group-item"><strong>Payment Type:</strong> {{ invoice.vendor_payment_type }}</li>
+                <li class="list-group-item"><strong>Vendor Group:</strong> {{ invoice.vendor_group }}</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Print Items Table -->
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Product ISBN</th>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Tax Type</th>
+                    <th>Tax Value</th>
+                    <th>Tax Amount</th>
+                    <th>Subtotal</th>
+                    <th>Total</th>
+                    <th class="no-print">Edit</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if invoice['items'] is iterable and invoice['items'] %}
+                    {% for item in invoice['items'] %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ item.product }}</td>
+                        <td>{{ isbn_to_name[item.product] if item.product in isbn_to_name else '' }}</td>
+                        <td>{{ "%.5f"|format(item.quantity) }}</td>
+                        <td class="text-end">{{ "%.2f"|format(item.price) }}</td>
+                        <td>{{ item.tax_type }}</td>
+                        <td>{{ item.tax_value }}</td>
+                        <td class="text-end">{{ "%.2f"|format(item.tax_amount) }}</td>
+                        <td class="text-end">{{ "%.2f"|format(item.subtotal) }}</td>
+                        <td class="text-end">{{ "%.2f"|format(item.total) }}</td>
+                        <td class="no-print">
+                            {% if (invoice.status == 'Active' and session.user.role in ['manager', 'accountant', 'super_admin']) or session.user.role == 'super_admin' %}
+                            <button class="btn btn-sm btn-warning edit-item-btn" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#editItemModal"
+                                    data-index="{{ loop.index0 }}"
+                                    data-product="{{ item.product }}"
+                                    data-category="{{ item.category }}"
+                                    data-quantity="{{ item.quantity }}"
+                                    data-price="{{ item.price }}"
+                                    data-tax_type="{{ item.tax_type }}"
+                                    data-tax_value="{{ item.tax_value }}"
+                                    data-discount_type="{{ item.discount_type if item.discount_type is defined else invoice.discount_type }}"
+                                    data-discount_value="{{ item.discount_value if item.discount_value is defined else invoice.discount_value }}">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="11">No items</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Print Summary -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="print-notes">
+                <h5>Notes:</h5>
+                <p>{{ invoice.notes if invoice.notes else 'No additional notes.' }}</p>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <table class="table table-sm print-summary">
+                <tr>
+                    <td><strong>Subtotal:</strong></td>
+                    <td class="text-end">{{ "%.2f"|format(invoice.subtotal) }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Discount ({{ invoice.discount_type }}):</strong></td>
+                    <td class="text-end">{{ "%.2f"|format(invoice.discount_amount) }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Amount After Discount:</strong></td>
+                    <td class="text-end">{{ "%.2f"|format(invoice.amount_after_discount) }}</td>
+                </tr>
+                <tr>
+                    <td><strong>VAT ({{ invoice.vendor_vat }}):</strong></td>
+                    <td class="text-end">{{ "%.2f"|format(invoice.total_tax) }}</td>
+                </tr>
+                <tr class="table-primary">
+                    <td><strong>Total Amount:</strong></td>
+                    <td class="text-end"><strong>{{ "%.2f"|format(invoice.total_amount) }}</strong></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Print Footer -->
+    <div class="print-footer d-none">
+        <div class="row">
+            <div class="col-6">
+                <p><strong>Payment Terms:</strong> {{ invoice.vendor_payment_terms }}</p>
+                <p><strong>Payment Type:</strong> {{ invoice.vendor_payment_type }}</p>
+            </div>
+            <div class="col-6 text-end">
+                <p><strong>Created By:</strong> {{ invoice.created_by }}</p>
+                <p><strong>Created At:</strong> {{ invoice.created_at }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-end mt-3 no-print">
+        <button class="btn btn-primary" onclick="window.print()">
+            <i class="fas fa-print"></i> Print
+        </button>
+    </div>
+</div>
+
+<!-- Edit Item Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1" aria-labelledby="editItemModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editItemModalLabel">Edit Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editItemForm">
+          <input type="hidden" id="edit-item-index">
+          <div class="mb-3">
+            <label for="edit-product" class="form-label">Product Name</label>
+            <input type="text" class="form-control" id="edit-product" readonly>
+          </div>
+          <div class="mb-3">
+            <label for="edit-quantity" class="form-label">Quantity</label>
+            <input type="number" class="form-control" id="edit-quantity" step="0.00001">
+          </div>
+          <div class="mb-3">
+            <label for="edit-price" class="form-label">Unit Price</label>
+            <input type="number" class="form-control" id="edit-price" step="0.01">
+          </div>
+          <div class="mb-3">
+            <label for="edit-tax-type" class="form-label">Tax Type</label>
+            <select class="form-select" id="edit-tax-type">
+              <option value="percentage">Percentage</option>
+              <option value="amount">Amount</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="edit-tax-value" class="form-label">Tax Value</label>
+            <input type="number" class="form-control" id="edit-tax-value" step="0.01">
+          </div>
+          <div class="mb-3">
+            <label for="edit-discount-type" class="form-label">Discount Type</label>
+            <select class="form-select" id="edit-discount-type">
+              <option value="percentage">Percentage</option>
+              <option value="amount">Amount</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="edit-discount-value" class="form-label">Discount Value</label>
+            <input type="number" class="form-control" id="edit-discount-value" step="0.01">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="saveItemChanges">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Print Styles */
+@media print {
+    @page {
+        size: A4;
+        margin: 1cm;
+    }
+
+    body {
+        font-size: 12pt;
+        line-height: 1.3;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .print-header {
+        display: block !important;
+        margin-bottom: 2cm;
+        border-bottom: 2px solid #000;
+        padding-bottom: 1cm;
+    }
+
+    .company-name {
+        font-size: 24pt;
+        font-weight: bold;
+        margin-bottom: 0.5cm;
+    }
+
+    .invoice-title {
+        font-size: 20pt;
+        color: #000;
+        margin-bottom: 0.5cm;
+    }
+
+    .print-footer {
+        display: block !important;
+        margin-top: 2cm;
+        border-top: 1px solid #000;
+        padding-top: 1cm;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table th {
+        background-color: #f8f9fa !important;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .table td, .table th {
+        padding: 8px;
+        border: 1px solid #dee2e6;
+    }
+
+    .print-summary {
+        width: 100%;
+        margin-top: 1cm;
+    }
+
+    .print-summary td {
+        padding: 4px 8px;
+    }
+
+    .print-notes {
+        margin-top: 1cm;
+    }
+
+    .text-end {
+        text-align: right !important;
+    }
+
+    .table-primary {
+        background-color: #f8f9fa !important;
+        -webkit-print-color-adjust: exact;
+    }
+}
+
+/* Regular Screen Styles */
+.company-name {
+    color: #2c3e50;
+}
+
+.invoice-title {
+    color: #2c3e50;
+}
+
+.table th {
+    background-color: #f8f9fa;
+}
+
+.print-summary {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.print-notes {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var editItemModal = document.getElementById('editItemModal');
+    var editItemForm = document.getElementById('editItemForm');
+    var saveItemChangesBtn = document.getElementById('saveItemChanges');
+
+    document.querySelectorAll('.edit-item-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.getElementById('edit-item-index').value = btn.getAttribute('data-index');
+            document.getElementById('edit-product').value = btn.getAttribute('data-product');
+            document.getElementById('edit-quantity').value = btn.getAttribute('data-quantity');
+            document.getElementById('edit-price').value = btn.getAttribute('data-price');
+            document.getElementById('edit-tax-type').value = btn.getAttribute('data-tax_type');
+            document.getElementById('edit-tax-value').value = btn.getAttribute('data-tax_value');
+            document.getElementById('edit-discount-type').value = btn.getAttribute('data-discount_type');
+            document.getElementById('edit-discount-value').value = btn.getAttribute('data-discount_value');
+        });
+    });
+
+    saveItemChangesBtn.addEventListener('click', function() {
+        var index = document.getElementById('edit-item-index').value;
+        var quantity = document.getElementById('edit-quantity').value;
+        var price = document.getElementById('edit-price').value;
+        var taxType = document.getElementById('edit-tax-type').value;
+        var taxValue = document.getElementById('edit-tax-value').value;
+        var discountType = document.getElementById('edit-discount-type').value;
+        var discountValue = document.getElementById('edit-discount-value').value;
+        var invoiceNumber = "{{ invoice.invoice_number }}";
+
+        fetch("{{ url_for('update_invoice_item') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: new URLSearchParams({
+                invoice_number: invoiceNumber,
+                item_index: index,
+                quantity: quantity,
+                price: price,
+                tax_type: taxType,
+                tax_value: taxValue,
+                discount_type: discountType,
+                discount_value: discountValue
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Optionally update the table row in the UI here
+                location.reload(); // Reload to reflect changes
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(err => {
+            alert('Error updating item.');
+        });
+    });
+
+    function updateInvoiceStatus(status) {
+        if (!confirm(`Are you sure you want to ${status.toLowerCase()} this invoice?`)) {
+            return;
+        }
+
+        fetch("{{ url_for('update_invoice_status') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: new URLSearchParams({
+                invoice_number: "{{ invoice.invoice_number }}",
+                status: status
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(err => {
+            alert('Error updating invoice status.');
+        });
+    }
+
+    // Make updateInvoiceStatus available globally
+    window.updateInvoiceStatus = updateInvoiceStatus;
+});
+</script>
+{% endblock %} 

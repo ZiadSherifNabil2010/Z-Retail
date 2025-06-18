@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2 class="mb-4">{{ 'Edit' if recipe else 'Add New' }} Recipe</h2>
+
+    <div class="card">
+        <div class="card-body">
+            <form id="recipeForm" method="POST">
+                <!-- Menu Item Selection -->
+                <div class="form-group">
+                    <label for="menuItem">Menu Item:</label>
+                    <select id="menuItem" name="menu_item_isbn" class="form-control" required>
+                        <option value="">Select Menu Item...</option>
+                        {% for item in inventory %}
+                        <option value="{{ item.ISBN }}" 
+                                data-name="{{ item['Item Name'] }}"
+                                data-unit="{{ item['Sales Unit & Purch Unit'] }}"
+                                {% if recipe and recipe.menu_item_name == item['Item Name'] %}selected{% endif %}>
+                            {{ item['Item Name'] }} ({{ item.ISBN }})
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    <div class="row mb-2 mt-3">
+                        <!-- Production Quantity input -->
+                        <div class="col">
+                            <label for="prod_quantity" class="form-label">Production Quantity</label>
+                            <input type="number" class="form-control" id="prod_quantity" name="prod_quantity" 
+                                   value="{{ recipe.prod_quantity if recipe else '' }}" min="0" step="any" required>
+                        </div>
+                        <!-- Production Unit dropdown -->
+                        <div class="col">
+                            <label for="prod_unit" class="form-label">Production Unit</label>
+                            <select class="form-select" id="prod_unit" name="prod_unit" required>
+                                <option value="Mililiter" {% if recipe and recipe.prod_unit == 'Mililiter' %}selected{% endif %}>Mililiter</option>
+                                <option value="Quantity" {% if recipe and recipe.prod_unit == 'Quantity' %}selected{% endif %}>Quantity</option>
+                                <option value="Gram" {% if recipe and recipe.prod_unit == 'Gram' %}selected{% endif %}>Gram</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ingredients Section -->
+                <div class="mt-4">
+                    <h4>Ingredients</h4>
+                    <div id="ingredientsList">
+                        {% if recipe %}
+                            {% for ingredient in recipe.ingredients %}
+                        <div class="ingredient-row row mb-3">
+                            <div class="col-md-4">
+                                <select class="form-control ingredient-select" required>
+                                    <option value="">Select Ingredient...</option>
+                                    {% for item in inventory %}
+                                    <option value="{{ item.ISBN }}"
+                                            data-name="{{ item['Item Name'] }}"
+                                            data-unit="{{ item['Sales Unit & Purch Unit'] }}"
+                                            {% if ingredient.raw_material_isbn|string == item.ISBN|string %}selected{% endif %}>
+                                        {{ item['Item Name'] }} ({{ item.ISBN }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="number" class="form-control quantity-input" 
+                                       placeholder="Quantity" value="{{ ingredient.quantity }}" min="0" step="any" required>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-control unit-select" required>
+                                    <option value="Quantity" {% if ingredient.ingredient_unit == 'Quantity' %}selected{% endif %}>Quantity</option>
+                                    <option value="Gram" {% if ingredient.ingredient_unit == 'Gram' %}selected{% endif %}>Gram</option>
+                                    <option value="Mililiter" {% if ingredient.ingredient_unit == 'Mililiter' %}selected{% endif %}>Mililiter</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-danger remove-ingredient">Remove</button>
+                            </div>
+                        </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <button type="button" id="addIngredient" class="btn btn-secondary">Add Ingredient</button>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">Save Recipe</button>
+                    <a href="{{ url_for('recipes') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Initialize select2
+    $('#menuItem').select2({
+        placeholder: 'Select Menu Item...'
+    });
+    
+    $('.ingredient-select').select2({
+        placeholder: 'Select Ingredient...'
+    });
+    
+    $('.unit-select').select2({
+        placeholder: 'Select Unit...'
+    });
+
+    // Add ingredient row
+    $('#addIngredient').click(function() {
+        addIngredientRow();
+    });
+
+    // Remove ingredient row
+    $(document).on('click', '.remove-ingredient', function() {
+        $(this).closest('.ingredient-row').remove();
+    });
+
+    // Update unit suggestion when ingredient is selected
+    $(document).on('change', '.ingredient-select', function() {
+        const selectedOption = $(this).find('option:selected');
+        const unitSelect = $(this).closest('.ingredient-row').find('.unit-select');
+        const suggestedUnit = selectedOption.data('unit');
+
+        // Only set if unit is not already selected and we have a valid suggestion
+        if (!unitSelect.val() && suggestedUnit) {
+            if (["Quantity", "Gram", "Mililiter"].includes(suggestedUnit)) {
+                unitSelect.val(suggestedUnit).trigger('change');
+            } else {
+                unitSelect.val("Quantity").trigger('change');
+            }
+        }
+    });
+
+    // Form submission
+    $('#recipeForm').submit(function(e) {
+        e.preventDefault();
+        
+        const menuItem = $('#menuItem option:selected');
+        const ingredients = [];
+        
+        $('.ingredient-row').each(function() {
+            const ingredientSelect = $(this).find('.ingredient-select option:selected');
+            ingredients.push({
+                raw_material_isbn: ingredientSelect.val(),
+                raw_material_name: ingredientSelect.data('name'),
+                quantity: $(this).find('.quantity-input').val(),
+                ingredient_unit: $(this).find('.unit-select').val()
+            });
+        });
+
+        const currentUserName = "{{ user_name if user_name else 'Unknown' }}";
+        
+        const recipeData = {
+            menu_item_isbn: menuItem.val(),
+            menu_item_name: menuItem.data('name'),
+            sales_unit: menuItem.data('unit'),
+            'Production Quantity': $('#prod_quantity').val(),
+            'Production Unit': $('#prod_unit').val(),
+            ingredients: ingredients,
+            status: 'Pending',
+            last_edited_by: currentUserName,
+            last_edited: new Date().toISOString().slice(0, 19).replace('T', ' ')
+        };
+
+        // Use appropriate endpoint based on whether we're editing or adding
+        const url = {% if recipe %}'{{ url_for("edit_recipe", recipe_id=recipe_id) }}'{% else %}'{{ url_for("add_recipe") }}'{% endif %};
+
+        $.ajax({
+            url: url,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(recipeData),
+            success: function(response) {
+                if (response.success) {
+                    window.location.href = '{{ url_for("recipes") }}';
+                } else {
+                    alert('Error saving recipe: ' + (response.message || 'Unknown error'));
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('Error saving recipe: ' + error);
+            }
+        });
+    });
+});
+
+function addIngredientRow() {
+    const row = `
+        <div class="ingredient-row row mb-3">
+            <div class="col-md-4">
+                <select class="form-control ingredient-select" required>
+                    <option value="">Select Ingredient...</option>
+                    {% for item in inventory %}
+                    <option value="{{ item.ISBN }}"
+                            data-name="{{ item['Item Name'] }}"
+                            data-unit="{{ item['Sales Unit & Purch Unit'] }}">
+                        {{ item['Item Name'] }} ({{ item.ISBN }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="number" class="form-control quantity-input" placeholder="Quantity" min="0" step="any" required>
+            </div>
+            <div class="col-md-3">
+                <select class="form-control unit-select" required>
+                    <option value="">Select Unit...</option>
+                    <option value="Quantity">Quantity</option>
+                    <option value="Gram">Gram</option>
+                    <option value="Mililiter">Mililiter</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-danger remove-ingredient">Remove</button>
+            </div>
+        </div>
+    `;
+    $('#ingredientsList').append(row);
+    $('#ingredientsList .ingredient-select').last().select2({
+        placeholder: 'Select Ingredient...'
+    });
+    $('#ingredientsList .unit-select').last().select2({
+        placeholder: 'Select Unit...'
+    });
+}
+</script>
+{% endblock %}

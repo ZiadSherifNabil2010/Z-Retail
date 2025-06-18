@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Manage Subscription</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label for="subscription_type">Subscription Type</label>
+            <select name="subscription_type" id="subscription_type" class="form-control">
+                <option value="3months">3 Months</option>
+                <option value="yearly">Yearly</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Update Subscription</button>
+    </form>
+</div>
+{% endblock %} 

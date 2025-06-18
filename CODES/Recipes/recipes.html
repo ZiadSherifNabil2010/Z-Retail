@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Add DataTables dependencies -->
+<link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<!-- Add SweetAlert2 -->
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+
+<div class="container-fluid mt-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="fas fa-utensils me-2"></i>Recipes Management
+        </h2>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('add_recipe') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add New Recipe
+            </a>
+        </div>
+    </div>
+    
+    <!-- Search Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search by name or ISBN...">
+                        <button class="btn btn-primary" type="button" id="searchButton">
+                            Search
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-end">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-outline-secondary" id="filterPending">
+                                <i class="fas fa-clock"></i> Pending
+                            </button>
+                            <button type="button" class="btn btn-outline-success" id="filterApproved">
+                                <i class="fas fa-check"></i> Approved
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" id="filterRejected">
+                                <i class="fas fa-times"></i> Rejected
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recipes Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="recipesTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ISBN</th>
+                            <th>Item Name</th>
+                            <th>Sales Unit</th>
+                            <th>Ingredients</th>
+                            <th>Status</th>
+                            <th>Last Edited</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for isbn, recipe in recipes.items() %}
+                        <tr class="recipe-row align-middle">
+                            <td class="recipe-isbn fw-bold">{{ isbn }}</td>
+                            <td class="recipe-name">{{ recipe.menu_item_name }}</td>
+                            <td>{{ recipe.sales_unit }}</td>
+                            <td>
+                                <span class="badge bg-info">
+                                    ingredients  {{ recipe.ingredients|length }} 
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {% if recipe.status == 'Approved' %}bg-success{% elif recipe.status == 'Rejected' %}bg-danger{% else %}bg-warning{% endif %} p-2">
+                                    <i class="fas {% if recipe.status == 'Approved' %}fa-check{% elif recipe.status == 'Rejected' %}fa-times{% else %}fa-clock{% endif %} me-1"></i>
+                                    {{ recipe.status or 'Pending' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if recipe.last_edited %}
+                                <div class="d-flex flex-column">
+                                    <small class="text-muted">{{ recipe.last_edited }}</small>
+                                    <small class="text-primary">By {{ recipe.last_edited_by }}</small>
+                                </div>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2 justify-content-center">
+                                    <a href="{{ url_for('view_recipe', isbn=isbn) }}" class="btn btn-info btn-sm" title="View Recipe">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('edit_recipe', isbn=isbn) }}" class="btn btn-warning btn-sm" title="Edit Recipe">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% if recipe.status != 'Approved' %}
+                                    <button onclick="updateRecipeStatus('{{ isbn }}', 'Approved')" class="btn btn-success btn-sm" title="Approve Recipe">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button onclick="updateRecipeStatus('{{ isbn }}', 'Rejected')" class="btn btn-danger btn-sm" title="Reject Recipe">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    {% endif %}
+                                    {% if session.user.role in ['manager', 'super_admin','developer'] %}
+                                    <button onclick="deleteRecipe('{{ isbn }}')" class="btn btn-danger btn-sm" title="Delete Recipe">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Initialize DataTable with enhanced options
+    var table = $('#recipesTable').DataTable({
+        "pageLength": 10,
+        "order": [[1, "asc"]], // Sort by Item Name by default
+        "language": {
+            "search": "",
+            "lengthMenu": "Show _MENU_ entries per page",
+            "info": "Showing _START_ to _END_ of _TOTAL_ recipes",
+            "infoEmpty": "No recipes found",
+            "infoFiltered": "(filtered from _MAX_ total recipes)"
+        },
+        "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
+        "responsive": true,
+        "columnDefs": [
+            { 
+                "targets": 4, // Status column
+                "type": "string",
+                "render": function(data, type, row) {
+                    if (type === 'filter') {
+                        return $(data).text().trim();
+                    }
+                    return data;
+                }
+            }
+        ]
+    });
+
+    // Search functionality
+    $('#searchInput').on('keyup', function() {
+        table.search(this.value).draw();
+    });
+
+    // Search button click
+    $('#searchButton').click(function() {
+        table.search($('#searchInput').val()).draw();
+    });
+
+    // Clear all filters
+    function clearFilters() {
+        table.search('').columns().search('').draw();
+        $('.btn-group .btn').removeClass('active');
+    }
+
+    // Status filter buttons
+    $('#filterPending').click(function() {
+        clearFilters();
+        table.column(4).search('Pending', true, false).draw();
+        $(this).addClass('active');
+    });
+
+    $('#filterApproved').click(function() {
+        clearFilters();
+        table.column(4).search('Approved', true, false).draw();
+        $(this).addClass('active');
+    });
+
+    $('#filterRejected').click(function() {
+        clearFilters();
+        table.column(4).search('Rejected', true, false).draw();
+        $(this).addClass('active');
+    });
+
+    // Add clear filters button
+    $('.btn-group').append(`
+        <button type="button" class="btn btn-outline-secondary" id="clearFilters">
+            <i class="fas fa-times"></i> Clear Filters
+        </button>
+    `);
+
+    // Clear filters button click
+    $('#clearFilters').click(function() {
+        clearFilters();
+    });
+
+    // Add active state styles
+    $('.btn-group .btn').click(function() {
+        $('.btn-group .btn').removeClass('active');
+        $(this).addClass('active');
+    });
+});
+
+function deleteRecipe(isbn) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: '/delete_recipe/' + isbn,
+                method: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire('Deleted!', 'Recipe has been deleted.', 'success').then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error!', 'Error deleting recipe.', 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error!', 'Error deleting recipe.', 'error');
+                }
+            });
+        }
+    });
+}
+
+function updateRecipeStatus(isbn, status) {
+    Swal.fire({
+        title: 'Update Status',
+        text: `Are you sure you want to ${status.toLowerCase()} this recipe?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: status === 'Approved' ? '#28a745' : '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: `Yes, ${status.toLowerCase()} it!`
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: '/update_recipe_status/' + isbn,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ status: status }),
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire('Updated!', `Recipe has been ${status.toLowerCase()}.`, 'success').then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error!', 'Error updating recipe status.', 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error!', 'Error updating recipe status.', 'error');
+                }
+            });
+        }
+    });
+}
+</script>
+
+<style>
+/* Enhanced styling */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: none;
+    margin-bottom: 1.5rem;
+}
+
+.table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.75em;
+}
+
+.btn {
+    padding: 0.375rem 0.75rem;
+    font-weight: 500;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+}
+
+.input-group-text {
+    border: none;
+    background-color: #f8f9fa;
+}
+
+#searchInput {
+    border-left: none;
+}
+
+#searchInput:focus {
+    box-shadow: none;
+    border-color: #ced4da;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .btn-group {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    .btn-group .btn {
+        flex: 1;
+    }
+    
+    .table-responsive {
+        border: 0;
+    }
+    
+    .d-flex.gap-2 {
+        flex-wrap: wrap;
+    }
+    
+    .d-flex.gap-2 .btn {
+        margin: 0.25rem;
+    }
+}
+
+/* DataTables customization */
+.dataTables_wrapper .dataTables_length select {
+    padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+    border-radius: 0.25rem;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.25rem;
+    border: 1px solid #ced4da;
+}
+
+.dataTables_wrapper .dataTables_info {
+    padding-top: 1rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 0.375rem 0.75rem;
+    margin: 0 0.25rem;
+    border-radius: 0.25rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: #007bff;
+    border-color: #007bff;
+    color: white !important;
+}
+
+/* Enhanced filter button styles */
+.btn-group .btn.active {
+    background-color: #6c757d;
+    color: white !important;
+    border-color: #6c757d;
+}
+
+.btn-group .btn.active.btn-outline-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-group .btn.active.btn-outline-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-group .btn:hover {
+    z-index: 1;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,580 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">Create New PO</h2>
+    
+    <form id="invoiceForm" method="POST" action="{{ url_for('create_invoice') }}">
+        <input type="hidden" name="items" id="itemsInput">
+        <div class="row mb-4">
+            <!-- Basic Information -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="branch" class="form-label">Branch</label>
+                            <select class="form-select" id="branch" name="branch" required>
+                                <option value="">Select Branch</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch }}">{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="report_number" class="form-label">Document Number</label>
+                            <input type="text" class="form-control" id="report_number" name="report_number" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="document_type" class="form-label">Document Type</label>
+                            <select class="form-select" id="document_type" name="document_type" required>
+                                <option value="">Select Document Type</option>
+                                <option value="فاتورة">فاتورة</option>
+                                <option value="ريسيبت">ريسيبت</option>
+                                <option value="طلب استلام">طلب استلام</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <input type="text" class="form-control mt-2" id="other_document_type" name="other_document_type" placeholder="Enter other document type" style="display:none;">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="date" class="form-label">Date</label>
+                            <input type="date" class="form-control" id="date" name="date" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="vendor" class="form-label">Vendor</label>
+                            <select class="form-select" id="vendor" name="vendor" required>
+                                <option value="">Search Vendor...</option>
+                                {% for vendor in vendors %}
+                                <option value="{{ vendor.vendor_code }}" data-name="{{ vendor.vendor_name }}">
+                                    {{ vendor.vendor_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Items List -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">Items</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="itemsList">
+                            <!-- Items will be added here dynamically -->
+                        </div>
+                        
+                        <button type="button" class="btn btn-success mt-3" id="addItem">
+                            <i class="fas fa-plus"></i> Add Item
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary Section -->
+        <div class="row mb-4">
+            <div class="col-md-6 offset-md-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="card-title mb-0">Invoice Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-2">
+                            <div class="col-6">Subtotal:</div>
+                            <div class="col-6 text-end" id="subtotal">0.00</div>
+                        </div>
+                        
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <label for="discount_type" class="form-label">Discount Type:</label>
+                                <select class="form-select" id="discount_type" name="discount_type">
+                                    <option value="percentage">Percentage</option>
+                                    <option value="amount">Amount</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label for="discount_value" class="form-label">Discount Value:</label>
+                                <input type="number" class="form-control" id="discount_value" name="discount_value" step="0.01" min="0">
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-2">
+                            <div class="col-6">Discount Amount:</div>
+                            <div class="col-6 text-end" id="discount_amount">0.00</div>
+                        </div>
+                        
+                        <div class="row mb-2">
+                            <div class="col-6">Amount After Discount:</div>
+                            <div class="col-6 text-end" id="amount_after_discount">0.00</div>
+                        </div>
+                        
+                        <div class="row mb-2">
+                            <div class="col-6">VAT (14%):</div>
+                            <div class="col-6 text-end" id="vat_amount">0.00</div>
+                        </div>
+                        
+                        <div class="row mb-2">
+                            <div class="col-6"><strong>Total:</strong></div>
+                            <div class="col-6 text-end"><strong id="total_amount">0.00</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mb-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> Save Invoice
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Item Template -->
+<template id="itemTemplate">
+    <div class="item-row card mb-3">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Product</label>
+                    <select class="form-select product-select" name="items[INDEX][product]" required>
+                        <option value="">Search Product...</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2 mb-2">
+                    <label class="form-label">Unit</label>
+                    <input type="text" class="form-control unit-display" readonly>
+                </div>
+                
+                <div class="col-md-2 mb-2">
+                    <label class="form-label">Quantity</label>
+                    <input type="number" class="form-control quantity-input" name="items[INDEX][quantity]" required min="0" step="0.00001" max="999999.99999">
+                </div>
+                
+                <div class="col-md-2 mb-2">
+                    <label class="form-label">Unit Price</label>
+                    <input type="number" class="form-control price-input" name="items[INDEX][price]" required min="0" step="0.00001" max="999999.99999">
+                </div>
+
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Tax</label>
+                    <div class="input-group">
+                        <div class="input-group-text">
+                            <div class="form-check form-check-inline me-2">
+                                <input class="form-check-input tax-type" type="radio" name="items[INDEX][tax_type]" value="percentage" checked>
+                                <label class="form-check-label">%</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input tax-type" type="radio" name="items[INDEX][tax_type]" value="amount">
+                                <label class="form-check-label">Amount</label>
+                            </div>
+                        </div>
+                        <input type="number" class="form-control tax-value" name="items[INDEX][tax_value]" min="0" step="0.01" placeholder="Tax value">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-2">
+                <div class="col-md-4">
+                    <label class="form-label">Subtotal</label>
+                    <input type="number" class="form-control item-subtotal" readonly>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Tax Amount</label>
+                    <input type="number" class="form-control item-tax" readonly>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Total</label>
+                    <input type="number" class="form-control item-total" readonly>
+                </div>
+            </div>
+            
+            <div class="row mt-2">
+                <div class="col-12 text-end">
+                    <button type="button" class="btn btn-danger btn-sm remove-item">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<style>
+.item-row {
+    transition: all 0.3s ease;
+}
+
+.item-row:hover {
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.remove-item {
+    opacity: 0.7;
+}
+
+.remove-item:hover {
+    opacity: 1;
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+}
+
+/* Select2 Custom Styles */
+.select2-container--default .select2-selection--single {
+    height: 38px;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 38px;
+    padding-left: 12px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 6px;
+}
+
+.select2-dropdown {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+}
+
+.select2-result-product {
+    padding: 8px;
+}
+
+.select2-result-product__title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.select2-result-product__details {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.select2-result-product__details small {
+    display: block;
+    margin-bottom: 2px;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] .select2-result-product__details {
+    color: #fff;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let itemIndex = 0;
+    const itemsList = document.getElementById('itemsList');
+    const itemTemplate = document.getElementById('itemTemplate');
+    
+    // Add first item
+    addItem();
+    
+    // Add Item button click handler
+    document.getElementById('addItem').addEventListener('click', addItem);
+    
+    // Calculate totals when values change
+    document.addEventListener('input', function(e) {
+        if (e.target.matches('.quantity-input, .price-input, .tax-value')) {
+            calculateItemTotals(e.target.closest('.item-row'));
+        }
+        if (e.target.matches('#discount_type, #discount_value')) {
+            calculateTotals();
+        }
+    });
+
+    // Handle tax type change
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('.tax-type')) {
+            calculateItemTotals(e.target.closest('.item-row'));
+        }
+    });
+    
+    // Remove item button click handler
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('.remove-item')) {
+            const itemRow = e.target.closest('.item-row');
+            itemRow.remove();
+            calculateTotals();
+        }
+    });
+    
+    function addItem() {
+        const clone = itemTemplate.content.cloneNode(true);
+        const itemRow = clone.querySelector('.item-row');
+        
+        // Replace INDEX with actual index
+        itemRow.innerHTML = itemRow.innerHTML.replace(/INDEX/g, itemIndex);
+        
+        // Add to items list
+        itemsList.appendChild(itemRow);
+        itemIndex++;
+        
+        // Initialize the new row
+        initializeItemRow(itemRow);
+    }
+    
+    function initializeItemRow(itemRow) {
+        // Add event listeners for the new row
+        const quantityInput = itemRow.querySelector('.quantity-input');
+        const priceInput = itemRow.querySelector('.price-input');
+        const taxValueInput = itemRow.querySelector('.tax-value');
+        const taxTypeInputs = itemRow.querySelectorAll('.tax-type');
+        const productSelect = itemRow.querySelector('.product-select');
+        
+        quantityInput.addEventListener('input', () => calculateItemTotals(itemRow));
+        priceInput.addEventListener('input', () => calculateItemTotals(itemRow));
+        taxValueInput.addEventListener('input', () => calculateItemTotals(itemRow));
+        taxTypeInputs.forEach(input => {
+            input.addEventListener('change', () => calculateItemTotals(itemRow));
+        });
+
+        // Initialize Select2 for the product dropdown
+        $(productSelect).select2({
+            placeholder: 'Search Product...',
+            allowClear: true,
+            minimumInputLength: 0,
+            matcher: function(params, data) {
+                // If there are no search terms, return all of the data
+                if ($.trim(params.term) === '') {
+                    return data;
+                }
+
+                // Do not display the item if there is no 'text' property
+                if (typeof data.text === 'undefined') {
+                    return null;
+                }
+
+                // Search in the text field
+                if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+                    return data;
+                }
+
+                // Return `null` if the term should not be displayed
+                return null;
+            }
+        });
+
+        // Load all products immediately
+        fetch('/get_all_products')
+            .then(response => response.json())
+            .then(data => {
+                if (!data || !data.items) {
+                    console.error('Invalid data received from server');
+                    return;
+                }
+                
+                const options = data.items.map(item => ({
+                    id: item.ISBN || '',
+                    text: item['Item Name'] || 'Unnamed Product',
+                    category: item['Category Name'] || 'Uncategorized',
+                    unit: item['Sales Unit & Purch Unit'] || 'Unit',
+                    sku: item['SKU'] || ''
+                })).filter(option => option.id && option.text); // Filter out invalid options
+                
+                if (options.length === 0) {
+                    console.warn('No valid products found');
+                    return;
+                }
+                
+                // Clear existing options
+                $(productSelect).empty();
+                
+                // Add all options to the select
+                options.forEach(option => {
+                    const newOption = new Option(option.text, option.id, false, false);
+                    // Store the additional data in the option element
+                    $(newOption).data('unit', option.unit);
+                    $(newOption).data('purchPrice', option.purchPrice);
+                    $(newOption).data('vat', option.vat);
+                    $(productSelect).append(newOption);
+                });
+                
+                // Trigger change to update Select2
+                $(productSelect).trigger('change');
+            })
+            .catch(error => {
+                console.error('Error loading products:', error);
+                // Show error message to user
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'alert alert-danger mt-2';
+                errorDiv.textContent = 'Error loading products. Please try again.';
+                itemRow.querySelector('.product-select').parentNode.appendChild(errorDiv);
+            });
+
+        // Handle product selection
+        $(productSelect).on('select2:select', function(e) {
+            const selectedOption = $(this).find('option:selected');
+            const unit = selectedOption.data('unit');
+            const purchPrice = selectedOption.data('purchPrice');
+            const vat = selectedOption.data('vat');
+            
+            console.log('Selected unit:', unit); // Debug log
+            
+            // Set the price input to the purchase price
+            priceInput.value = purchPrice;
+            // Set the tax value to the VAT
+            taxValueInput.value = vat;
+            // Set the unit display
+            itemRow.querySelector('.unit-display').value = unit;
+            // Trigger calculations
+            calculateItemTotals(itemRow);
+        });
+
+        // Clear unit display when product is cleared
+        $(productSelect).on('select2:clear', function() {
+            itemRow.querySelector('.unit-display').value = '';
+            priceInput.value = '';
+            taxValueInput.value = '';
+        });
+    }
+
+    function calculateItemTotals(itemRow) {
+        const quantity = parseFloat(parseFloat(itemRow.querySelector('.quantity-input').value).toFixed(5)) || 0;
+        const price = parseFloat(parseFloat(itemRow.querySelector('.price-input').value).toFixed(5)) || 0;
+        const taxValue = parseFloat(itemRow.querySelector('.tax-value').value) || 0;
+        const taxType = itemRow.querySelector('.tax-type:checked').value;
+        
+        // Calculate subtotal
+        const subtotal = quantity * price;
+        
+        // Calculate tax amount
+        let taxAmount = 0;
+        if (taxType === 'percentage') {
+            taxAmount = subtotal * (taxValue / 100);
+        } else {
+            taxAmount = taxValue;
+        }
+        
+        // Calculate total
+        const total = subtotal + taxAmount;
+        
+        // Update display with fixed decimal places and no scientific notation
+        itemRow.querySelector('.item-subtotal').value = subtotal.toFixed(5).replace(/\.?0+$/, '');
+        itemRow.querySelector('.item-tax').value = taxAmount.toFixed(5).replace(/\.?0+$/, '');
+        itemRow.querySelector('.item-total').value = total.toFixed(5).replace(/\.?0+$/, '');
+        
+        calculateTotals();
+    }
+    
+    function calculateTotals() {
+        let subtotal = 0;
+        let totalTax = 0;
+        let total = 0;
+        
+        // Calculate totals from all items
+        document.querySelectorAll('.item-row').forEach(itemRow => {
+            subtotal += parseFloat(itemRow.querySelector('.item-subtotal').value) || 0;
+            totalTax += parseFloat(itemRow.querySelector('.item-tax').value) || 0;
+            total += parseFloat(itemRow.querySelector('.item-total').value) || 0;
+        });
+        
+        // Calculate discount
+        const discountType = document.getElementById('discount_type').value;
+        const discountValue = parseFloat(document.getElementById('discount_value').value) || 0;
+        let discountAmount = 0;
+        
+        if (discountType === 'percentage') {
+            discountAmount = subtotal * (discountValue / 100);
+        } else {
+            discountAmount = discountValue;
+        }
+        
+        // Calculate amount after discount
+        const amountAfterDiscount = subtotal - discountAmount;
+        
+        // Calculate final total
+        const finalTotal = amountAfterDiscount + totalTax;
+        
+        // Update display with fixed decimal places and no scientific notation
+        document.getElementById('subtotal').textContent = subtotal.toFixed(5).replace(/\.?0+$/, '');
+        document.getElementById('discount_amount').textContent = discountAmount.toFixed(5).replace(/\.?0+$/, '');
+        document.getElementById('amount_after_discount').textContent = amountAfterDiscount.toFixed(5).replace(/\.?0+$/, '');
+        document.getElementById('vat_amount').textContent = totalTax.toFixed(5).replace(/\.?0+$/, '');
+        document.getElementById('total_amount').textContent = finalTotal.toFixed(5).replace(/\.?0+$/, '');
+    }
+
+    // Serialize items before form submit
+    document.getElementById('invoiceForm').addEventListener('submit', function(e) {
+        const items = [];
+        document.querySelectorAll('.item-row').forEach(function(row) {
+            const product = row.querySelector('.product-select').value;
+            const quantity = parseFloat(parseFloat(row.querySelector('.quantity-input').value).toFixed(5));
+            const price = parseFloat(row.querySelector('.price-input').value);
+            const taxType = row.querySelector('.tax-type:checked').value;
+            const taxValue = parseFloat(row.querySelector('.tax-value').value);
+            
+            items.push({
+                product,
+                quantity,
+                price,
+                tax_type: taxType,
+                tax_value: taxValue
+            });
+        });
+        document.getElementById('itemsInput').value = JSON.stringify(items);
+    });
+
+    // Show/hide other document type input
+    document.getElementById('document_type').addEventListener('change', function() {
+        var otherInput = document.getElementById('other_document_type');
+        if (this.value === 'Other') {
+            otherInput.style.display = 'block';
+            otherInput.required = true;
+        } else {
+            otherInput.style.display = 'none';
+            otherInput.required = false;
+        }
+    });
+
+    // Initialize Select2 for vendor dropdown
+    $('#vendor').select2({
+        placeholder: 'Search Vendor...',
+        allowClear: true,
+        minimumInputLength: 0,
+        matcher: function(params, data) {
+            // If there are no search terms, return all of the data
+            if ($.trim(params.term) === '') {
+                return data;
+            }
+
+            // Do not display the item if there is no 'text' property
+            if (typeof data.text === 'undefined') {
+                return null;
+            }
+
+            // Search in the text field
+            if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+                return data;
+            }
+
+            // Return `null` if the term should not be displayed
+            return null;
+        }
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,679 @@
+<!-- templates/kds.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cns Admin Display Screen</title>
+    <meta http-equiv="refresh" content="5"> <!-- Auto-refresh every 10 seconds -->
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #f0f2f5; 
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .orders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            grid-auto-rows: auto;
+        }
+        .order-card { 
+            background: white; 
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            height: fit-content;
+            min-width: 400px;
+        }
+        .order-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .order-header { 
+            background: #1a73e8;
+            color: white;
+            padding: 15px;
+            font-size: 1.1em;
+            flex-shrink: 0;
+        }
+        .order-header strong {
+            display: block;
+            font-size: 1.2em;
+            margin-bottom: 5px;
+        }
+        .order-time {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .items { 
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #1a73e8;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .item-name {
+            font-weight: bold;
+            color: #1a73e8;
+            margin-bottom: 6px;
+            font-size: 1.1em;
+        }
+        .item-details {
+            color: #666;
+            font-size: 1em;
+        }
+        .order-footer {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-top: 1px solid #eee;
+            font-size: 0.9em;
+            color: #666;
+            flex-shrink: 0;
+        }
+        h1 {
+            text-align: center;
+            color: #1a73e8;
+            margin: 20px 0;
+            font-size: 2em;
+        }
+        .branch-badge {
+            background: #e8f0fe;
+            color: #1a73e8;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 8px;
+        }
+        .payment-badge {
+            background: #e6f4ea;
+            color: #137333;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-right: 8px;
+        }
+        .total-amount {
+            font-weight: bold;
+            color: #1a73e8;
+        }
+        
+        /* Alert styles */
+        .order-card.alert-red {
+            border-color: #dc3545;
+            animation: pulse-red 2s infinite;
+        }
+        
+        .order-card.alert-orange {
+            border-color: #fd7e14;
+            animation: pulse-orange 2s infinite;
+        }
+        
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+        
+        @keyframes pulse-orange {
+            0% { box-shadow: 0 0 0 0 rgba(253, 126, 20, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(253, 126, 20, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(253, 126, 20, 0); }
+        }
+        
+        .alert-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            color: white;
+        }
+        
+        .alert-badge.red {
+            background-color: #dc3545;
+        }
+        
+        .alert-badge.orange {
+            background-color: #fd7e14;
+        }
+        
+        .item.received {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+            opacity: 0.7;
+        }
+        
+        .item.received .item-name {
+            color: #4caf50;
+            text-decoration: line-through;
+        }
+        
+        .complete-checkbox {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            opacity: 0;
+        }
+        
+        .complete-checkbox + label {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            border: 2px solid #1a73e8;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .complete-checkbox:checked + label {
+            background: #4caf50;
+            border-color: #4caf50;
+        }
+        
+        .complete-checkbox:checked + label::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 16px;
+        }
+        
+        .order-card {
+            transition: all 0.5s ease;
+        }
+        
+        .order-card.fade-out {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        
+        /* Add these new styles */
+        .stopwatch {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .stopwatch i {
+            color: #ffffff;
+        }
+        
+        .stopwatch-time {
+            font-family: monospace;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .stopwatch.warning {
+            color: #fd7e14;
+        }
+        
+        .stopwatch.warning i,
+        .stopwatch.warning .stopwatch-time {
+            color: #fd7e14;
+        }
+        
+        .stopwatch.danger {
+            color: #dc3545;
+        }
+        
+        .stopwatch.danger i,
+        .stopwatch.danger .stopwatch-time {
+            color: #dc3545;
+        }
+        
+        /* Add these new styles */
+        .kds-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            margin-bottom: 20px;
+        }
+        
+        .branch-info {
+            background: #1a73e8;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2em;
+        }
+        
+        .branch-info i {
+            font-size: 1.2em;
+        }
+        
+        .branch-name {
+            font-weight: bold;
+        }
+        
+        .no-orders {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            margin: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .no-orders i {
+            font-size: 3em;
+            color: #1a73e8;
+            margin-bottom: 15px;
+        }
+        
+        .no-orders p {
+            color: #666;
+            font-size: 1.2em;
+            margin: 0;
+        }
+        
+        /* Add these new styles */
+        .orders-grid {
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        .order-card {
+            cursor: move; /* Show move cursor */
+            user-select: none; /* Prevent text selection while dragging */
+        }
+        
+        .order-card.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+        
+        .drop-zone {
+            border: 2px dashed #1a73e8;
+            background: rgba(26, 115, 232, 0.1);
+            border-radius: 12px;
+            min-height: 100px;
+            margin: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1a73e8;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .drop-zone.drag-over {
+            background: rgba(26, 115, 232, 0.2);
+            border-color: #1a73e8;
+        }
+        
+        .order-card .drag-handle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
+        }
+        
+        .order-card:hover .drag-handle {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="kds-header">
+        <h1>Check Received Items</h1>
+        <div class="branch-info">
+            <i class="fas fa-store"></i>
+            <span class="branch-name">{{ current_branch }}</span>
+        </div>
+    </div>
+    <div class="orders-grid">
+        {% if orders %}
+            {% for order in orders %}
+            {% if order.order_type == 'take-away' %}
+                <div class="order-card {% if order.alert_status == 'red' %}alert-red{% elif order.alert_status == 'orange' %}alert-orange{% endif %}" 
+                     data-order-id="{{ order.order_id }}"
+                     draggable="true"
+                     ondragstart="handleDragStart(event)"
+                     ondragend="handleDragEnd(event)">
+                    <i class="fas fa-grip-vertical drag-handle"></i>
+                    {% if order.alert_status == 'red' %}
+                        <div class="alert-badge red">Over 10 minutes</div>
+                    {% elif order.alert_status == 'orange' %}
+                        <div class="alert-badge orange">Over 5 minutes</div>
+                    {% endif %}
+                    
+                    <div class="order-header">
+                        <strong>Order #{{ order.order_id }}</strong>
+                        <div class="order-time">
+                            {{ order.timestamp }}
+                            <div class="stopwatch {% if order.alert_status == 'red' %}danger{% elif order.alert_status == 'orange' %}warning{% endif %}">
+                                <i class="fas fa-clock"></i>
+                                <span class="stopwatch-time" data-start-time="{{ order.timestamp }}">00:00:00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="items">
+                        {% for item in order.get('items', []) %}
+                            <div class="item" id="item-{{ order.order_id }}-{{ loop.index }}">
+                                <input type="checkbox" 
+                                       class="complete-checkbox" 
+                                       id="complete-{{ order.order_id }}-{{ loop.index }}"
+                                       onchange="handleItemCompletion('{{ order.order_id }}', {{ loop.index }}, this.checked)">
+                                <label for="complete-{{ order.order_id }}-{{ loop.index }}"></label>
+                                <div class="item-name">{{ item.get('name', '') }} x {{ item.get('quantity', 0) }}</div>
+                                <div class="item-details">
+                                    ISBN: {{ item.get('isbn', '') }} | 
+                                    Price: {{ "%.2f"|format(item.get('price', 0)) }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="order-footer">
+                        <span class="payment-badge">{{ order.get('payment_method', '') }}</span>
+                        <span class="total-amount">{{ "%.2f"|format(order.get('total_amount', 0)) }}</span>
+                        <span style="float: right;">{{ order.get('cashier', '') }}</span>
+                    </div>
+                </div>
+            {% endif %}
+
+            {% endfor %}
+        {% else %}
+            <div class="no-orders">
+                <i class="fas fa-clipboard-list"></i>
+                <p>No active orders for {{ current_branch }}</p>
+            </div>
+        {% endif %}
+    </div>
+    <script>
+        // Store received items in localStorage to persist across page refreshes
+        function getreceivedItems() {
+            const received = localStorage.getItem('receivedItems');
+            return received ? JSON.parse(received) : {};
+        }
+
+        function savereceivedItems(received) {
+            localStorage.setItem('receivedItems', JSON.stringify(received));
+        }
+
+        // Initialize received items on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const receivedItems = getreceivedItems();
+            Object.entries(receivedItems).forEach(([orderId, items]) => {
+                items.forEach(itemIndex => {
+                    const checkbox = document.getElementById(`complete-${orderId}-${itemIndex}`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        const item = document.getElementById(`item-${orderId}-${itemIndex}`);
+                        if (item) {
+                            item.classList.add('received');
+                        }
+                    }
+                });
+            });
+            
+            // Check for fully received orders
+            checkAllOrdersCompletion();
+            updateStopwatches();
+        });
+
+        function handleItemCompletion(orderId, itemIndex, isreceived) {
+            // First update the UI
+            const item = document.getElementById(`item-${orderId}-${itemIndex}`);
+            if (item) {
+                if (isreceived) {
+                    item.classList.add('received');
+                } else {
+                    item.classList.remove('received');
+                }
+            }
+            
+            // Send update to server
+            fetch('/update_order_item_status_cns_admin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    order_id: orderId,
+                    item_index: itemIndex,
+                    is_received: isreceived
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // If order is received, fade out the card
+                    if (data.order_status === 'received') {
+                        const orderCard = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
+                        if (orderCard) {
+                            orderCard.classList.add('fade-out');
+                            setTimeout(() => {
+                                orderCard.remove();
+                            }, 500);
+                        }
+                    }
+                } else {
+                    console.error('Error updating order status:', data.error);
+                    // Revert the checkbox if there was an error
+                    const checkbox = document.getElementById(`complete-${orderId}-${itemIndex}`);
+                    if (checkbox) {
+                        checkbox.checked = !isreceived;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Revert the checkbox if there was an error
+                const checkbox = document.getElementById(`complete-${orderId}-${itemIndex}`);
+                if (checkbox) {
+                    checkbox.checked = !isreceived;
+                }
+            });
+        }
+
+        function checkOrderCompletion(orderId) {
+            const orderCard = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
+            if (!orderCard) return;
+            
+            const items = orderCard.querySelectorAll('.item');
+            const receivedItems = getreceivedItems()[orderId] || [];
+            
+            if (items.length === receivedItems.length) {
+                // All items are received, fade out the card
+                orderCard.classList.add('fade-out');
+                setTimeout(() => {
+                    orderCard.remove();
+                }, 500);
+            }
+        }
+
+        function checkAllOrdersCompletion() {
+            const orderCards = document.querySelectorAll('.order-card');
+            orderCards.forEach(card => {
+                const orderId = card.getAttribute('data-order-id');
+                if (orderId) {
+                    checkOrderCompletion(orderId);
+                }
+            });
+        }
+
+        function updateStopwatches() {
+            const stopwatches = document.querySelectorAll('.stopwatch-time');
+            const now = new Date();
+            
+            stopwatches.forEach(stopwatch => {
+                const startTime = new Date(stopwatch.dataset.startTime);
+                const elapsed = now - startTime;
+                
+                // Calculate hours, minutes, and seconds
+                const hours = Math.floor(elapsed / (1000 * 60 * 60));
+                const minutes = Math.floor((elapsed % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((elapsed % (1000 * 60)) / 1000);
+                
+                // Format the time
+                const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                stopwatch.textContent = timeString;
+                
+                // Update stopwatch color based on elapsed time
+                const stopwatchContainer = stopwatch.closest('.stopwatch');
+                const elapsedMinutes = hours * 60 + minutes;
+                
+                stopwatchContainer.classList.remove('warning', 'danger');
+                if (elapsedMinutes > 10) {
+                    stopwatchContainer.classList.add('danger');
+                } else if (elapsedMinutes > 5) {
+                    stopwatchContainer.classList.add('warning');
+                }
+            });
+        }
+
+        // Update stopwatches every second
+        setInterval(updateStopwatches, 1000);
+
+        // Store the dragged element
+        let draggedElement = null;
+        
+        function handleDragStart(e) {
+            draggedElement = e.target;
+            e.target.classList.add('dragging');
+            
+            // Set the drag image to be the card itself
+            const dragImage = e.target.cloneNode(true);
+            dragImage.style.width = e.target.offsetWidth + 'px';
+            dragImage.style.position = 'absolute';
+            dragImage.style.top = '-1000px';
+            document.body.appendChild(dragImage);
+            e.dataTransfer.setDragImage(dragImage, e.target.offsetWidth / 2, e.target.offsetHeight / 2);
+            
+            // Store the order ID in the data transfer
+            e.dataTransfer.setData('text/plain', e.target.dataset.orderId);
+            
+            // Add drag-over class to all drop zones
+            document.querySelectorAll('.orders-grid').forEach(grid => {
+                grid.classList.add('drop-zone');
+            });
+        }
+        
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            
+            // Remove drag-over class from all drop zones
+            document.querySelectorAll('.orders-grid').forEach(grid => {
+                grid.classList.remove('drop-zone');
+            });
+            
+            // Remove the temporary drag image
+            const dragImage = document.querySelector('.dragging');
+            if (dragImage) {
+                dragImage.remove();
+            }
+        }
+        
+        // Add drag and drop event listeners to the orders grid
+        document.addEventListener('DOMContentLoaded', function() {
+            const ordersGrid = document.querySelector('.orders-grid');
+            
+            ordersGrid.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                this.classList.add('drag-over');
+            });
+            
+            ordersGrid.addEventListener('dragleave', function(e) {
+                this.classList.remove('drag-over');
+            });
+            
+            ordersGrid.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+                
+                const orderId = e.dataTransfer.getData('text/plain');
+                const draggedCard = document.querySelector(`[data-order-id="${orderId}"]`);
+                
+                if (draggedCard) {
+                    // Get the drop position
+                    const dropY = e.clientY;
+                    const cards = Array.from(this.querySelectorAll('.order-card:not(.dragging)'));
+                    
+                    // Find the card to insert before
+                    const cardToInsertBefore = cards.find(card => {
+                        const cardRect = card.getBoundingClientRect();
+                        return dropY < cardRect.top + cardRect.height / 2;
+                    });
+                    
+                    // Insert the dragged card at the new position
+                    if (cardToInsertBefore) {
+                        this.insertBefore(draggedCard, cardToInsertBefore);
+                    } else {
+                        this.appendChild(draggedCard);
+                    }
+                    
+                    // Save the new order to localStorage
+                    saveCardOrder();
+                }
+            });
+        });
+        
+        // Function to save the card order
+        function saveCardOrder() {
+            const ordersGrid = document.querySelector('.orders-grid');
+            const cards = Array.from(ordersGrid.querySelectorAll('.order-card'));
+            const orderIds = cards.map(card => card.dataset.orderId);
+            localStorage.setItem('kdsCardOrder', JSON.stringify(orderIds));
+        }
+        
+        // Function to restore the card order
+        function restoreCardOrder() {
+            const savedOrder = localStorage.getItem('kdsCardOrder');
+            if (savedOrder) {
+                const orderIds = JSON.parse(savedOrder);
+                const ordersGrid = document.querySelector('.orders-grid');
+                
+                orderIds.forEach(orderId => {
+                    const card = document.querySelector(`[data-order-id="${orderId}"]`);
+                    if (card) {
+                        ordersGrid.appendChild(card);
+                    }
+                });
+            }
+        }
+        
+        // Call restoreCardOrder when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            restoreCardOrder();
+            // ... your existing DOMContentLoaded code ...
+        });
+    </script>
+</body>
+</html>           

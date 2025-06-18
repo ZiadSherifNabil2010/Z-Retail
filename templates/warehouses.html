@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Warehouses Management</h2>
+
+    <!-- Add Warehouse Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('warehouses_management') }}">
+                <div class="row">
+                    <div class="col-md-10">
+                        <input type="text" name="name" class="form-control" placeholder="Warehouse Name" required>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Add Warehouse</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Warehouses List -->
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Warehouses List</h5>
+            {% if warehouses %}
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for wh in warehouses %}
+                    <tr>
+                        <td>{{ wh.name }}</td>
+                        <td>{{ wh.created_at }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('delete_warehouse_route', warehouse_id=wh.id) }}" style="display:inline;">
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this warehouse?');">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No warehouses found.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>All Subscriptions</h1>
+    <h3>Companies</h3>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Renewal Date</th>
+                <th>Period</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for company_id, company in companies.items() %}
+            <tr>
+                <td>{{ company.name }}</td>
+                <td>{{ company.subscription.status }}</td>
+                <td>{{ company.subscription.renewal_date }}</td>
+                <td>{{ company.subscription.period }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <h3>Branches</h3>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Company</th>
+                <th>Status</th>
+                <th>Renewal Date</th>
+                <th>Period</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for branch_id, branch in branches.items() %}
+            <tr>
+                <td>{{ branch.name }}</td>
+                <td>{{ branch.company_id }}</td>
+                <td>{{ branch.subscription.status }}</td>
+                <td>{{ branch.subscription.renewal_date }}</td>
+                <td>{{ branch.subscription.period }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %} 

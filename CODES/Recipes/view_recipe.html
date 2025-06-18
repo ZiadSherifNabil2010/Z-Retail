@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Recipe Details</h2>
+        <a href="{{ url_for('recipes') }}" class="btn btn-secondary">Back to Recipes</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h4>Menu Item Details</h4>
+                    <table class="table">
+                        <tr>
+                            <th>ISBN:</th>
+                            <td>{{ isbn }}</td>
+                        </tr>
+                        <tr>
+                            <th>Item Name:</th>
+                            <td>{{ recipe.menu_item_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Production Quantity:</th>
+                            <td>{{ recipe.prod_quantity }}</td>
+                        </tr>
+                        <tr>
+                            <th>Production Unit:</th>
+                            <td>{{ recipe.prod_unit }}</td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>{{ recipe.status }}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Edited:</th>
+                            <td>{{ recipe.last_edited }}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Edited By:</th>
+                            <td>{{ recipe.last_edited_by }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <h4>Ingredients</h4>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Ingredient ISBN</th>
+                            <th>Ingredient Name</th>
+                            <th>Quantity</th>
+                            <th>Unit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ingredient in recipe.ingredients %}
+                        <tr>
+                            <td>{{ ingredient.raw_material_isbn }}</td>
+                            <td>{{ ingredient.raw_material_name }}</td>
+                            <td>{{ ingredient.quantity }}</td>
+                            <td>{{ ingredient.ingredient_unit }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
